@@ -16,9 +16,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CATALOG } from '../src/data/catalog.js';
 import { parseOmm, parseTleText, validateElements } from '../src/data/elements.js';
+import { parseOem, NASA_ISS_OEM_CURRENT } from './lib/oem.mjs';
 
 const BASE = 'https://celestrak.org/NORAD/elements/gp.php';
-const NASA_ISS_OEM = 'https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.txt';
 const OUT_DIR = fileURLToPath(new URL('../public/data/', import.meta.url));
 const HEADERS = { 'User-Agent': 'satellite-pass-tracker (student project; daily fetch)' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -104,28 +104,10 @@ async function main() {
 
 /** Download NASA's ISS OEM (EME2000, UTC), keep every 5th state (~20 min), save as JSON. */
 async function fetchIssEphemeris() {
-  const text = await get(NASA_ISS_OEM);
-  const header = (key) => new RegExp(`^${key}\\s*=\\s*(.+)$`, 'm').exec(text)?.[1].trim();
-  if (header('REF_FRAME') !== 'EME2000' || header('TIME_SYSTEM') !== 'UTC') {
-    throw new Error(`unexpected frame/time system: ${header('REF_FRAME')} / ${header('TIME_SYSTEM')}`);
-  }
-  const states = text.split('\n')
-    .filter((line) => /^\d{4}-\d{2}-\d{2}T/.test(line))
-    .map((line) => line.trim().split(/\s+/))
-    .filter((_, k) => k % 5 === 0)
-    .map(([time, ...nums]) => [`${time}Z`, ...nums.slice(0, 3).map((x) => Number(Number(x).toFixed(4))), ...nums.slice(3, 6).map((x) => Number(Number(x).toFixed(7)))]);
-  // Sanity check: ISS distance from Earth's centre is ~6,700-6,850 km.
-  for (const [time, x, y, z] of states) {
-    const r = Math.hypot(x, y, z);
-    if (!(r > 6550 && r < 7000)) throw new Error(`implausible ISS radius ${r} km at ${time}`);
-  }
-  if (states.length < 100) throw new Error(`only ${states.length} states`);
-  const doc = { source: NASA_ISS_OEM, creationDate: header('CREATION_DATE'), frame: 'EME2000', timeSystem: 'UTC', units: 'km, km/s', states };
+  const oem = parseOem(await get(NASA_ISS_OEM_CURRENT), 5);
+  if (oem.states.length < 100) throw new Error(`only ${oem.states.length} states`);
+  const doc = { source: NASA_ISS_OEM_CURRENT, creationDate: oem.creationDate.replace(/Z$/, ''), frame: oem.frame, timeSystem: oem.timeSystem, units: 'km, km/s', states: oem.states };
   await writeFile(join(OUT_DIR, 'iss-oem.json'), JSON.stringify(doc) + '\n');
-  console.log(`Wrote NASA ISS ephemeris: ${states.length} states, ${states[0][0]} to ${states.at(-1)[0]} (created ${doc.creationDate})`);
+  console.log(`Wrote NASA ISS ephemeris: ${oem.states.length} states, ${oem.states[0][0]} to ${oem.states.at(-1)[0]} (created ${doc.creationDate})`);
+  return oem;
 }
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});

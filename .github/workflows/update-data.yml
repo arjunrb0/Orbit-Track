@@ -24,18 +24,20 @@ jobs:
         run: npm run fetch-data
       - name: Check the new data
         run: npm test
+      - name: Update the accuracy study (vs NASA's ISS trajectory)
+        run: npm run study
       - name: Commit if the element sets changed
         run: |
-          # omm.json always changes (its fetchedAt timestamp), so judge by tle.txt,
-          # which only changes when CelesTrak publishes new elements, and by
-          # NASA's ISS ephemeris, which is updated a few times a week.
-          git add -N public/data/iss-oem.json 2>/dev/null || true
-          if git diff --quiet -- public/data/tle.txt public/data/iss-oem.json; then
+          # omm.json and accuracy-study.json always change (timestamps), so judge
+          # by tle.txt (new CelesTrak elements), NASA's ISS ephemeris (updated a
+          # few times a week) and the study's archive.
+          git add -N public/data/iss-oem.json data/history 2>/dev/null || true
+          if git diff --quiet -- public/data/tle.txt public/data/iss-oem.json data/history; then
             echo "No new element sets."
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/data
+          git add public/data data/history
           git commit -m "Update orbital data $(date -u +%Y-%m-%d)"
           git push

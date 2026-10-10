@@ -73,8 +73,15 @@ What the numbers mean:
 - **Adding J2's secular drift closes over 95% of the gap** to SGP4 for low orbits. The J2 rates
   agree with SGP4's own internal rates to within 0.1–0.7%.
 - **Against reality, the simple models hold up.** Compared with NASA's own ISS trajectory, the J2 models
-  land between 0.9× and 2.7× SGP4's own error, and after 3 days J2 alone (19 km) is slightly *better* than
-  SGP4 (21 km). SGP4 is clearly better in the first hours, thanks to short-period terms these models leave out.
+  land between 0.9× and 2.7× SGP4's own error over a week. SGP4 is clearly better in the first hours,
+  thanks to short-period terms these models leave out. (At 3 days J2 alone briefly looks *better* than SGP4,
+  but that's a coincidence: its along-track error happens to pass through zero then, on its way from +6 km at the start
+  to −59 km by day 6. See [the breakdown](docs/RESULTS.md#against-nasas-actual-iss-trajectory).)
+- **A growing study, not one snapshot.** One element set can't separate skill from luck, so the daily
+  GitHub Action now archives every ISS element set and NASA ephemeris and re-measures all of them against
+  the freshest NASA data. Results become final once the NASA data used is at most 4 days old. The live
+  chart is on the site (ISS → Accuracy → vs NASA trajectory); it started on 10 October 2026 and grows
+  by about one element set a day.
 - **Drag: a lesson in choosing the yardstick.** Against SGP4, adding the element set's ṅ drag term cut the
   ISS's 1-week error tenfold (155 km → 15 km). Against NASA's trajectory it doesn't: J2 alone ends 89 km
   *behind* the real ISS and J2 + drag 46 km *ahead*, because the ṅ (like SGP4's own drag) overestimated that
@@ -94,8 +101,12 @@ What the numbers mean:
 ## Limitations (honest)
 
 - **SGP4 is a yardstick, not the truth.** Against NASA's trajectory it was 5 km off at epoch and 60 km
-  after a week. The NASA comparison covers only the ISS, for one week, and NASA's file is itself a
-  high-precision *prediction* (made 7 October), not raw measurements.
+  after a week.
+- **NASA's trajectory is a prediction too.** Comparing 52 archived NASA files with each other shows their
+  predictions drift by a median of 3–5 km at 1–4 days old, rising to ~40 km at 9 days. The one-week NASA
+  comparison used a file that was up to 9 days old by the end, so its 7-day numbers carry tens of km of
+  uncertainty. (The daily study avoids this by only using fresh NASA data.)
+- **The study is young.** Until a few weeks of final results exist, treat its medians as preliminary.
 - **Not modelled:** J2's short-period terms, higher harmonics (J3, J4), the Sun's and Moon's gravity.
   Drag is a simple constant-ṅ term taken from the element set, not a physical atmosphere model. For
   geosynchronous orbits J2 alone gives mixed results (it improves IRNSS-1I but makes INSAT-3DR worse),
@@ -131,10 +142,12 @@ Every module is tested against **independent** references, not against its own d
 | Earth's shadow, visibility | satellite.js shadow function (outside penumbra); Heavens-Above labels (27/27) and shadow entry/exit times (within 2 s) |
 | TEME → J2000 (precession, nutation) | Vallado et al. (2006) worked example, to under 1 m |
 | Positions vs reality | NASA's ISS ephemeris: SGP4 and NASA agree to ~0.1 km radially and cross-track at epoch (frames check) |
+| The reference itself | NASA's predictions vs its own later files (52 archived ephemerides) |
+| Study bookkeeping | Archive deduplication, newest-NASA-file-wins splicing, final vs provisional windows |
 | Refraction | Standard values: 34′ at the horizon, ~5.3′ at 10°, ~1′ at 45° |
 | Brightness | Inverse-square and phase-law checks; Heavens-Above magnitudes (within 0.75) |
 
-77 tests run with Node's built-in test runner. A failing test blocks deployment. Bugs found along the
+80 tests run with Node's built-in test runner. A failing test blocks deployment. Bugs found along the
 way, and how they were caught, are recorded in the [development log](docs/LOG.md).
 
 ## How it works
@@ -201,8 +214,9 @@ npm run dev
 ```
 
 Other scripts: `npm test` (test suite), `npm run build` (production build into `dist/`),
-`npm run fetch-data` (download fresh elements from CelesTrak), `npm run compare` (regenerate
-[docs/RESULTS.md](docs/RESULTS.md)).
+`npm run fetch-data` (download fresh elements from CelesTrak and NASA), `npm run study` (update the
+accuracy study), `npm run nasa-consistency` (measure NASA's own prediction drift from its archive), and
+`npm run compare` (regenerate [docs/RESULTS.md](docs/RESULTS.md)).
 
 ## Project structure
 
@@ -212,8 +226,9 @@ src/orbit/      constants, vectors, Kepler propagator, J2 and drag, time, frames
 src/passes/     pass prediction, refraction and brightness
 src/analysis/   comparison against SGP4
 src/ui/         map, 3D globe, pass panel and sky plot, accuracy chart
-scripts/        daily data fetch, SGP4 comparison report
-tests/          77 tests, with fixtures (ISS element set, Heavens-Above passes, NASA ISS ephemeris)
+scripts/        daily data fetch, accuracy study, SGP4 comparison report, NASA consistency check
+data/history/   archived ISS element sets and spliced NASA trajectory (grows daily)
+tests/          80 tests, with fixtures (ISS element set, Heavens-Above passes, NASA ISS ephemeris)
 docs/           results, development log
 .github/        CI: test → build → deploy to Pages; daily data update
 ```

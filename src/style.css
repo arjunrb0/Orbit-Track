@@ -179,6 +179,16 @@ canvas.view[hidden] { display: none; }
 .acc-tt-row b { margin-left: auto; padding-left: 0.8rem; font-variant-numeric: tabular-nums; }
 .acc-tt-sub { color: var(--muted); font-size: 0.72rem; margin-top: 0.3rem; }
 .acc-foot { font-size: 0.72rem; margin: 0.3rem 0 0; }
+.study { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.study[hidden] { display: none; }
+.study-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.study-head h3 { font-size: 0.9rem; margin: 0; }
+.study-head h3 .muted { font-weight: 400; font-size: 0.78rem; }
+.study p { font-size: 0.78rem; line-height: 1.45; margin: 0.45rem 0; }
+.study-legend { justify-content: flex-start; margin: 0.3rem 0; font-size: 0.75rem; }
+.swatch-dot { border-radius: 50%; }
+.swatch-hollow { background: transparent !important; border: 2px solid var(--muted); width: 10px; height: 10px; box-sizing: border-box; }
+.study-chart svg { display: block; }
 
 /* -------------------------------------------------------------- passes */
 .pass-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 1rem; margin-top: 0.8rem; align-items: start; }

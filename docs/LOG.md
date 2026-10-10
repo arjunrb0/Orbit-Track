@@ -265,3 +265,35 @@ details in [RESULTS.md](RESULTS.md))
 - NASA's ephemeris is itself a prediction (made 7 Oct), not raw tracking.
 - Brightness: within ±0.7 magnitudes; the differences aren't a constant offset, so the sphere phase law is
   the limiting assumption (the ISS's flat solar arrays don't reflect like a sphere).
+
+## Review fixes and the daily accuracy study (2026-10-10)
+
+**Fixed (from a review)**
+- Map labels collided (INSAT-3DR over the pass's "rise"). Labels are now placed after everything else: each
+  tries four positions and takes the first that overlaps no dot or earlier label, in priority order
+  (selected satellite, then the pass, then the rest). Checked programmatically: no overlaps at Bengaluru or
+  Sriharikota with all 10 labels shown.
+- The place menu now shows the current place (or the custom location's name) instead of "Choose a place…".
+- Header said "own two-body propagator" although the default is J2 + drag; now "own orbit propagator".
+- "J2 beat SGP4 at 3 days" was presented as a result. Averaging the along-track error over each half day
+  shows J2 starts ~6 km ahead (like SGP4), drifts backwards with no drag, and passes through zero between
+  day 2.5 and 3: a coincidence of timing. RESULTS.md now shows that breakdown, and the README no longer
+  claims an advantage.
+
+**Built**
+- `scripts/accuracy-study.mjs` (run by the daily Action): archives every ISS element set and NASA
+  ephemeris in `data/history/`, splices NASA files (newest prediction wins), and re-measures every archived
+  element set at 1, 3 and 7 days. Results are final only when the NASA data used was at most 4 days old.
+  Shown on the site under ISS → Accuracy → vs NASA trajectory.
+- `scripts/nasa-consistency.mjs`: NASA keeps a dated archive of its ISS ephemerides. Comparing 52 files
+  (June–October 2026) with later ones measures how NASA's own predictions drift: median 3–5 km at 1–4 days
+  old, ~18 km at 7 days, ~40 km at 9 days.
+
+**Surprises**
+- The one-week NASA comparison used a file that was up to 8.9 days old by the end, so its 7-day numbers carry
+  an uncertainty of tens of km (median 36 km for predictions that old). Now stated in RESULTS.md.
+- The archive contains the same file under two dates once; the first consistency run compared it with
+  itself (0.00 km errors). Duplicates are now removed by creation time.
+- Archive folder names changed format between 2020 (`ISS.OEM_J2K_EPH/`) and 2026 (`ISS_OEM/`).
+- Historical element sets aren't freely available (Space-Track needs an account), so the study can only
+  grow forward from 10 October 2026.

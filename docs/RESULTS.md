@@ -165,12 +165,65 @@ error at day 7 (+ = the model runs ahead of the real ISS):
   tenfold, but that was largely agreeing with SGP4's own drag. Against NASA, after 7 days J2 alone is 89 km
   *behind* the real ISS and J2 + drag is 46 km *ahead*. The truth lies between: the ṅ in the element set
   (like SGP4's drag) overestimates this week's drag. Real drag depends on solar activity, which a constant ṅ can't capture.
-- **Both J2 models land between 0.9× and 2.7× SGP4's own error** across these windows, and at 3 days
-  J2 alone (19 km) is slightly better than SGP4 (21 km). For a model built from a handful
-  of equations, that is the headline result: over days, the simple physics does nearly as well as the standard model
-  *against reality*. SGP4 is clearly better in the first hours, thanks to the short-period terms these models leave out.
-- **Caveat:** NASA's file is itself a prediction made on 2026-10-07, not raw tracking, so by the end of this window it
-  may be a few km from where the ISS really was.
+- **Both J2 models land between 0.9× and 2.7× SGP4's own error** across these windows. SGP4 is clearly
+  better in the first hours, thanks to the short-period terms these models leave out.
+- **"J2 beat SGP4 at 3 days" is a coincidence, not an advantage.** Averaged over each half day (to remove the
+  ±17 km swing within each orbit), the along-track errors (km, + = ahead of the real ISS) are:
+
+  | Days after epoch | 0–0.5 | 1–1.5 | 2–2.5 | 3–3.5 | 4–4.5 | 5–5.5 | 6–6.5 |
+  |---|---|---|---|---|---|---|---|
+  | SGP4 | +6.4 | +10.5 | +16.0 | +23.5 | +32.1 | +41.2 | +51.4 |
+  | Kepler + J2 | +6.0 | +7.3 | +2.6 | −4.6 | −18.0 | −35.5 | −59.0 |
+  | Kepler + J2 + drag | +6.2 | +11.7 | +16.8 | +24.8 | +32.2 | +40.9 | +49.2 |
+
+  All three start with the same offset of about 6 km, inherited from the element set. With no drag, J2's error then
+  drifts backwards and passes through zero between day 2.5 and 3, which is why it looks good at 3 days; two days later it
+  is worse than SGP4. J2 + drag tracks SGP4 almost exactly: the ṅ term and SGP4's drag model agree with each other,
+  and both overestimated this week's drag. One element set can't separate skill from luck, hence the daily study below.
+- **Caveat: the reference ages too.** NASA's file was created on 2026-10-07, so by day 7 of this window it was an
+  8.9-day-old prediction. NASA's own predictions of that age typically differ from later NASA files by 36 km (median; 90th percentile 101 km), so the 7-day numbers above carry an uncertainty of that size.
+
+## How good is NASA's trajectory as a reference?
+
+NASA publishes a new ISS ephemeris about three times a week. Comparing each archived file's prediction with later
+files (each used only within a day of its creation, when it is freshest) shows how fast NASA's own predictions drift.
+52 archived files from 2026-05-29 to 2026-10-07 (`npm run nasa-consistency`):
+
+| Prediction age | Comparisons | Median error | 90th percentile | Largest |
+|---|---|---|---|---|
+| 1–2 days | 1,215 | 4.0 km | 16 km | 18 km |
+| 2–3 days | 9,283 | 3.0 km | 11 km | 26 km |
+| 3–4 days | 7,037 | 4.7 km | 12 km | 20 km |
+| 4–5 days | 6,179 | 6.2 km | 29 km | 55 km |
+| 5–6 days | 9,230 | 11 km | 33 km | 69 km |
+| 6–7 days | 3,537 | 17 km | 57 km | 88 km |
+| 7–8 days | 13,822 | 18 km | 67 km | 115 km |
+| 8–9 days | 2,775 | 36 km | 101 km | 147 km |
+| 9–10 days | 9,336 | 41 km | 132 km | 180 km |
+
+A few-days-old NASA prediction is good to a few km, far better than SGP4 over a week, but not perfect, and its error
+grows with age just like any prediction. Occasional large differences are likely reboosts or docking manoeuvres that
+were planned differently from one file to the next. The daily study below therefore only uses NASA data at most
+4 days old.
+
+## Accuracy across many element sets (growing daily)
+
+The comparison above is one element set over one week. The daily GitHub Action now archives every new ISS element set
+and every new NASA ephemeris, splices the NASA files into a best-estimate trajectory (newest prediction wins), and
+re-measures every archived element set against it (`npm run study`). A result counts as **final** only when all the
+NASA data it was compared against was at most 4 days old; until then it is provisional and is recomputed as fresher NASA
+files arrive. The live chart is on the website (ISS → Accuracy → vs NASA trajectory).
+
+As of 2026-10-10: 2 ISS element sets, 1 NASA ephemeris.
+
+| Horizon | Final results | Median: SGP4 | Median: + J2 | Median: + J2 + drag | + J2 closer than SGP4 | + J2 + drag closer than SGP4 |
+|---|---|---|---|---|---|---|
+| 1 day | 2 | 9.8 km | 20 km | 22 km | 0 of 2 | 0 of 2 |
+| 3 days | 0 | – | – | – | – | – |
+| 7 days | 0 | – | – | – | – | – |
+
+**This is still a small sample.** It started on 10 October 2026 and gains about one element set a day. Treat these
+numbers as preliminary until there are a few weeks of final results.
 
 ## Visible passes vs Heavens-Above
 
@@ -210,6 +263,7 @@ and an assumed ISS standard magnitude of -1.8 (brightness at 1000 km, half lit; 
   from data that is already hours or days old, so real-world error is larger.
 - One snapshot of elements per satellite. A fuller study would repeat this over many element
   sets and dates.
-- The NASA comparison covers the ISS only, over one week; NASA's file is a prediction, not measured positions.
+- The NASA comparison covers the ISS only. NASA's files are predictions, not measured positions (their own drift is
+  quantified above). The many-element-set study is young and grows by about one element set a day.
 - The force table gives magnitudes only (the tidal terms are their maximum values); the effect on an
   orbit also depends on direction and on how the force averages over an orbit.

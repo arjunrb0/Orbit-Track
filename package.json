@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "node --test",
     "fetch-data": "node scripts/fetch-data.mjs",
-    "compare": "node scripts/compare-sgp4.mjs"
+    "compare": "node scripts/compare-sgp4.mjs",
+    "study": "node scripts/accuracy-study.mjs",
+    "nasa-consistency": "node scripts/nasa-consistency.mjs"
   },
   "engines": {
     "node": ">=22"

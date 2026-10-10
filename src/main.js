@@ -4,6 +4,7 @@ import { propagateKepler, toKeplerian } from './orbit/kepler.js';
 import { propagateJ2, propagateJ2Drag } from './orbit/j2.js';
 import { createAccuracyChart } from './ui/accuracy-chart.js';
 import { createPassPanel, nextPassSummary } from './ui/pass-panel.js';
+import { createStudyPanel } from './ui/study-panel.js';
 import { norm } from './orbit/vec.js';
 import { R_EARTH, TWO_PI, DEG } from './orbit/constants.js';
 import { temeToEcef, lookAngles } from './orbit/frames.js';
@@ -37,7 +38,7 @@ let minElevationDeg = 10;
 
 // ---------------------------------------------------------------- observer
 // Default: Bengaluru (ISRO headquarters). Remembered in this browser only.
-const DEFAULT_OBSERVER = { latDeg: 12.9716, lonDeg: 77.5946, heightKm: 0.92, name: 'Bengaluru (default)' };
+const DEFAULT_OBSERVER = { latDeg: 12.9716, lonDeg: 77.5946, heightKm: 0.92, name: 'Bengaluru (ISRO HQ)' };
 const OBSERVER_KEY = 'spt-observer';
 function loadObserver() {
   try {
@@ -64,7 +65,18 @@ function setObserver(next) {
 function showObserver() {
   document.getElementById('obs-lat').value = observer.latDeg.toFixed(4);
   document.getElementById('obs-lon').value = observer.lonDeg.toFixed(4);
-  document.getElementById('obs-note').textContent = observer.name ?? '';
+  // The place menu shows the current place: the matching preset if there is
+  // one, otherwise the first entry relabelled (e.g. "Custom location").
+  const select = document.getElementById('obs-preset');
+  const match = [...select.options].find((o) => {
+    if (!o.value) return false;
+    const [lat, lon] = o.value.split(',').map(Number);
+    return Math.abs(lat - observer.latDeg) < 1e-3 && Math.abs(lon - observer.lonDeg) < 1e-3;
+  });
+  select.options[0].textContent = match ? 'Choose a place…' : observer.name ?? 'Custom location';
+  select.value = match ? match.value : '';
+  // The menu now names the place, so the note line is only for status messages.
+  document.getElementById('obs-note').textContent = '';
 }
 
 const compass = (deg) => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(deg / 45) % 8];
@@ -76,10 +88,10 @@ async function loadElements() {
   return { fetchedAt: data.fetchedAt, elements: data.satellites.map(parseOmm), omms: data.satellites };
 }
 
-/** NASA's ISS trajectory, if the daily fetch saved one. Optional. */
-async function loadIssEphemeris() {
+/** Optional data files: NASA's ISS trajectory and the daily accuracy study. */
+async function loadOptional(name) {
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}data/iss-oem.json`);
+    const res = await fetch(`${import.meta.env.BASE_URL}data/${name}`);
     return res.ok ? await res.json() : null;
   } catch {
     return null;
@@ -175,7 +187,9 @@ async function main() {
   buildTable(satellites);
 
   const accuracy = createAccuracyChart(document.getElementById('accuracy'));
-  const issEphemeris = await loadIssEphemeris();
+  const [issEphemeris, study] = await Promise.all([loadOptional('iss-oem.json'), loadOptional('accuracy-study.json')]);
+  const studyEl = document.querySelector('.study');
+  if (study?.records?.length) createStudyPanel(studyEl, study);
   let accReference = 'sgp4';
   const ACC_DESC = {
     SGP4: 'How far this project\'s propagators drift from SGP4 (satellite.js), starting from the element-set epoch. SGP4 is the reference these elements were made for, not ground truth.',
@@ -187,6 +201,7 @@ async function main() {
     const reference = accuracy.show(sat, isIss && accReference === 'nasa' ? issEphemeris.states : null);
     document.querySelector('.acc-desc').textContent = ACC_DESC[reference];
     document.querySelector('.legend-sgp4').hidden = reference === 'SGP4';
+    studyEl.hidden = !(study?.records?.length && reference !== 'SGP4');
   };
   const passPanel = createPassPanel(document.getElementById('passes'), {
     getTime: simTime,
@@ -297,7 +312,6 @@ async function main() {
     if (!opt.value) return;
     const [latDeg, lonDeg, heightKm] = opt.value.split(',').map(Number);
     setObserver({ latDeg, lonDeg, heightKm, name: opt.textContent });
-    ev.target.value = '';
   });
   document.getElementById('geolocate').addEventListener('click', () => {
     const note = document.getElementById('obs-note');

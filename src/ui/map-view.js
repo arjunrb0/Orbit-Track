@@ -203,16 +203,54 @@ export function createMapView(canvas, satellites, { getTime, getObserver, onSele
     polyline(h.points, b);
     ctx.lineCap = 'butt';
     const [first, last] = [h.points[0], h.points.at(-1)];
-    ctx.font = '600 11px system-ui, sans-serif';
     for (const [pt, label] of [[first, 'rise'], [last, 'set']]) {
       const [x, y] = toXY(pt[0], pt[1], b);
       ctx.fillStyle = css('--text');
       ctx.beginPath();
       ctx.arc(x, y, 3.5, 0, TWO_PI);
       ctx.fill();
-      ctx.fillStyle = css('--text');
-      ctx.fillText(label, x + 6, y + 12);
+      layout.obstacles.push(dotBox(x, y, 4));
+      layout.labels.push({ text: label, x, y, priority: 1, font: '600 11px system-ui, sans-serif', alpha: 1 });
     }
+  }
+
+  // ------------------------------------------------------------- labels
+  // Labels are placed after everything else is drawn. Each tries four spots
+  // around its point (right-above, right-below, left-above, left-below) and
+  // takes the first that overlaps no dot and no label placed before it, so the
+  // most important labels (selected satellite, then the pass) win. A label that
+  // fits nowhere is skipped, except the top-priority one.
+  const layout = { labels: [], obstacles: [] };
+  const dotBox = (x, y, r) => ({ x0: x - r, y0: y - r, x1: x + r, y1: y + r });
+  const overlaps = (a, c) => a.x0 < c.x1 && c.x0 < a.x1 && a.y0 < c.y1 && c.y0 < a.y1;
+
+  function placeLabels(b) {
+    const placed = [...layout.obstacles];
+    const drawn = [];
+    layout.labels.sort((a, c) => a.priority - c.priority);
+    for (const l of layout.labels) {
+      ctx.font = l.font;
+      const w = ctx.measureText(l.text).width, h = 12;
+      const spots = [[8, -6], [8, 14], [-8 - w, -6], [-8 - w, 14]].map(([dx, dy]) => {
+        const tx = l.x + dx, ty = l.y + dy;
+        return { tx, ty, box: { x0: tx - 2, y0: ty - h, x1: tx + w + 2, y1: ty + 3 } };
+      });
+      const inside = (sp) => sp.box.x0 >= b.x0 && sp.box.x1 <= b.x0 + b.w && sp.box.y0 >= b.y0 && sp.box.y1 <= b.y0 + b.h;
+      let spot = spots.find((sp) => inside(sp) && !placed.some((o) => overlaps(o, sp.box)));
+      if (!spot && l.priority === 0) spot = spots.find(inside) ?? spots[0];
+      if (!spot) continue;
+      placed.push(spot.box);
+      drawn.push({ text: l.text, ...spot.box });
+      ctx.globalAlpha = l.alpha;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = css('--bg');
+      ctx.lineWidth = 3;
+      ctx.strokeText(l.text, spot.tx, spot.ty);
+      ctx.fillStyle = css('--text');
+      ctx.fillText(l.text, spot.tx, spot.ty);
+    }
+    ctx.globalAlpha = 1;
+    canvas.placedLabels = drawn; // for inspection in tests / dev tools
   }
 
   function frame() {
@@ -264,6 +302,8 @@ export function createMapView(canvas, satellites, { getTime, getObserver, onSele
 
     // Satellites and the selected one's visibility footprint
     state.screenPositions = [];
+    layout.labels = [];
+    layout.obstacles = [];
     for (const sat of ordered) {
       const p = subSatellitePoint(propagate(sat.el, t).r, t);
       const [x, y] = toXY(p.lonDeg, p.latDeg, b);
@@ -291,16 +331,24 @@ export function createMapView(canvas, satellites, { getTime, getObserver, onSele
       ctx.arc(x, y, isSel || isHover ? 5.5 : 4, 0, TWO_PI);
       ctx.fill();
       ctx.stroke();
+      layout.obstacles.push(dotBox(x, y, 6));
       if (isSel || isHover || b.w > 700) {
-        ctx.font = `${isSel ? 600 : 500} 12px system-ui, sans-serif`;
-        ctx.fillStyle = css('--text');
-        ctx.globalAlpha = isSel || isHover ? 1 : 0.7;
-        ctx.fillText(sat.label, x + 8, y - 7);
-        ctx.globalAlpha = 1;
+        layout.labels.push({
+          text: sat.label, x, y,
+          priority: isSel || isHover ? 0 : 2,
+          font: `${isSel ? 600 : 500} 12px system-ui, sans-serif`,
+          alpha: isSel || isHover ? 1 : 0.75,
+        });
       }
     }
     drawHighlight(b);
     drawObserver(b);
+    const obs = getObserver();
+    if (obs) {
+      const [ox, oy] = toXY(obs.lon / DEG, obs.lat / DEG, b);
+      layout.obstacles.push(dotBox(ox, oy, 7));
+    }
+    placeLabels(b);
     ctx.restore();
   }
   requestAnimationFrame(frame);

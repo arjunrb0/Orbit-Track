@@ -6,7 +6,7 @@
 // element-set epoch, with 1-minute steps for 7 days. Numbers quoted in the
 // prose are computed here too, so the text stays true when the data changes.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { CATALOG } from '../src/data/catalog.js';
 import { parseOmm } from '../src/data/elements.js';
 import { errorSeries, errorSeriesVsTruth, summarise, sgp4Reference } from '../src/analysis/compare.js';
@@ -103,6 +103,22 @@ const truthSummary = summarise(truthSeries, [6 * HOUR, DAY, 3 * DAY, 7 * DAY], t
 const lastTruth = truthSeries.at(-1);
 const truthRows = truthKeys.map((k) => `| ${truthLabels[k]} | ${truthSummary.map((x) => fmt(x[k])).join(' | ')} | ${lastTruth[k].along >= 0 ? '+' : '−'}${fmt(Math.abs(lastTruth[k].along))} |`);
 const firstTruth = truthSeries[0];
+// Along-track error averaged over each half day: removes the within-orbit
+// swing and shows the steady drift underneath.
+const halfDays = [];
+for (let d = 0; d < 7; d += 0.5) {
+  const rows = truthSeries.filter((r) => r.t >= d * DAY && r.t < (d + 0.5) * DAY);
+  if (!rows.length) continue;
+  const mean = (k) => rows.reduce((a, r) => a + r[k].along, 0) / rows.length;
+  halfDays.push({ from: d, sgp4: mean('sgp4'), j2: mean('j2'), drag: mean('drag'), swingJ2: Math.max(...rows.map((r) => r.j2.along)) - Math.min(...rows.map((r) => r.j2.along)) });
+}
+const j2Crossing = halfDays.find((h, k) => k > 0 && Math.sign(h.j2) !== Math.sign(halfDays[k - 1].j2));
+const signed = (x) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}`;
+const oemCreated = Date.parse(`${oem.creationDate}Z`);
+const truthAgeAtEnd = (iss.epochMs + 7 * DAY - oemCreated) / DAY;
+const consistency = existsSync(new URL('../docs/data/nasa-consistency.json', import.meta.url)) ? read('../docs/data/nasa-consistency.json') : null;
+const binAt = (age) => consistency?.bins.find((b) => age >= b.ageDays[0] && age < b.ageDays[1]);
+const study = existsSync(new URL('../public/data/accuracy-study.json', import.meta.url)) ? read('../public/data/accuracy-study.json') : null;
 const ratios = truthSummary.flatMap((x) => [x.j2 / x.sgp4, x.drag / x.sgp4]);
 
 // ------------------------------ visible passes: shadow timing and brightness
@@ -285,14 +301,57 @@ ${truthRows.join('\n')}
   tenfold, but that was largely agreeing with SGP4's own drag. Against NASA, after 7 days J2 alone is ${fmt(Math.abs(lastTruth.j2.along))} km
   *behind* the real ISS and J2 + drag is ${fmt(Math.abs(lastTruth.drag.along))} km *ahead*. The truth lies between: the ṅ in the element set
   (like SGP4's drag) overestimates this week's drag. Real drag depends on solar activity, which a constant ṅ can't capture.
-- **Both J2 models land between ${(Math.min(...ratios)).toFixed(1)}× and ${(Math.max(...ratios)).toFixed(1)}× SGP4's own error** across these windows, and at 3 days
-  J2 alone (${fmt(truthSummary[2].j2)} km) is ${truthSummary[2].j2 < truthSummary[2].sgp4 ? 'slightly better than' : 'close to'} SGP4 (${fmt(truthSummary[2].sgp4)} km). For a model built from a handful
-  of equations, that is the headline result: over days, the simple physics does nearly as well as the standard model
-  *against reality*. SGP4 is clearly better in the first hours, thanks to the short-period terms these models leave out.
-- **Caveat:** NASA's file is itself a prediction made on ${oem.creationDate.slice(0, 10)}, not raw tracking, so by the end of this window it
-  may be a few km from where the ISS really was.
+- **Both J2 models land between ${(Math.min(...ratios)).toFixed(1)}× and ${(Math.max(...ratios)).toFixed(1)}× SGP4's own error** across these windows. SGP4 is clearly
+  better in the first hours, thanks to the short-period terms these models leave out.
+- **"J2 beat SGP4 at 3 days" is a coincidence, not an advantage.** Averaged over each half day (to remove the
+  ±${fmt(Math.max(...halfDays.map((h) => h.swingJ2)) / 2)} km swing within each orbit), the along-track errors (km, + = ahead of the real ISS) are:
 
-## Visible passes vs Heavens-Above
+  | Days after epoch | ${halfDays.filter((_, k) => k % 2 === 0).map((h) => `${h.from}–${h.from + 0.5}`).join(' | ')} |
+  |---|${halfDays.filter((_, k) => k % 2 === 0).map(() => '---').join('|')}|
+  | SGP4 | ${halfDays.filter((_, k) => k % 2 === 0).map((h) => signed(h.sgp4)).join(' | ')} |
+  | Kepler + J2 | ${halfDays.filter((_, k) => k % 2 === 0).map((h) => signed(h.j2)).join(' | ')} |
+  | Kepler + J2 + drag | ${halfDays.filter((_, k) => k % 2 === 0).map((h) => signed(h.drag)).join(' | ')} |
+
+  All three start with the same offset of about ${Math.round((halfDays[0].sgp4 + halfDays[0].j2 + halfDays[0].drag) / 3)} km, inherited from the element set. With no drag, J2's error then
+  drifts backwards and passes through zero between day ${j2Crossing ? `${j2Crossing.from} and ${j2Crossing.from + 0.5}` : '?'}, which is why it looks good at 3 days; two days later it
+  is worse than SGP4. J2 + drag tracks SGP4 almost exactly: the ṅ term and SGP4's drag model agree with each other,
+  and both overestimated this week's drag. One element set can't separate skill from luck, hence the daily study below.
+- **Caveat: the reference ages too.** NASA's file was created on ${oem.creationDate.slice(0, 10)}, so by day 7 of this window it was ${/^8|^11|^18/.test(truthAgeAtEnd.toFixed(1)) ? 'an' : 'a'}
+  ${truthAgeAtEnd.toFixed(1)}-day-old prediction. ${binAt(truthAgeAtEnd) ? `NASA's own predictions of that age typically differ from later NASA files by ${fmt(binAt(truthAgeAtEnd).median)} km (median; 90th percentile ${fmt(binAt(truthAgeAtEnd).p90)} km), so the 7-day numbers above carry an uncertainty of that size.` : 'The 7-day numbers carry a correspondingly larger uncertainty.'}
+
+${consistency ? `## How good is NASA's trajectory as a reference?
+
+NASA publishes a new ISS ephemeris about three times a week. Comparing each archived file's prediction with later
+files (each used only within a day of its creation, when it is freshest) shows how fast NASA's own predictions drift.
+${consistency.files} archived files from ${consistency.from.slice(0, 10)} to ${consistency.to.slice(0, 10)} (\`npm run nasa-consistency\`):
+
+| Prediction age | Comparisons | Median error | 90th percentile | Largest |
+|---|---|---|---|---|
+${consistency.bins.map((b) => `| ${b.ageDays[0]}–${b.ageDays[1]} days | ${b.n.toLocaleString('en-GB')} | ${fmt(b.median)} km | ${fmt(b.p90)} km | ${fmt(b.max)} km |`).join('\n')}
+
+A few-days-old NASA prediction is good to a few km, far better than SGP4 over a week, but not perfect, and its error
+grows with age just like any prediction. Occasional large differences are likely reboosts or docking manoeuvres that
+were planned differently from one file to the next. The daily study below therefore only uses NASA data at most
+${study?.truthMaxAgeDays ?? 4} days old.
+
+` : ''}${study ? `## Accuracy across many element sets (growing daily)
+
+The comparison above is one element set over one week. The daily GitHub Action now archives every new ISS element set
+and every new NASA ephemeris, splices the NASA files into a best-estimate trajectory (newest prediction wins), and
+re-measures every archived element set against it (\`npm run study\`). A result counts as **final** only when all the
+NASA data it was compared against was at most ${study.truthMaxAgeDays} days old; until then it is provisional and is recomputed as fresher NASA
+files arrive. The live chart is on the website (ISS → Accuracy → vs NASA trajectory).
+
+As of ${study.updated.slice(0, 10)}: ${study.elementSets} ISS element set${study.elementSets === 1 ? '' : 's'}, ${study.nasaFiles} NASA ephemer${study.nasaFiles === 1 ? 'is' : 'ides'}.
+
+| Horizon | Final results | Median: SGP4 | Median: + J2 | Median: + J2 + drag | + J2 closer than SGP4 | + J2 + drag closer than SGP4 |
+|---|---|---|---|---|---|---|
+${Object.entries(study.summary).map(([k, v]) => `| ${k.replace('d', k === '1d' ? ' day' : ' days')} | ${v.n} | ${v.n ? fmt(v.median.sgp4) + ' km' : '–'} | ${v.n ? fmt(v.median.j2) + ' km' : '–'} | ${v.n ? fmt(v.median.drag) + ' km' : '–'} | ${v.n ? `${v.beatsSgp4.j2} of ${v.n}` : '–'} | ${v.n ? `${v.beatsSgp4.drag} of ${v.n}` : '–'} |`).join('\n')}
+
+${Object.values(study.summary).every((v) => v.n < 10) ? `**This is still a small sample.** It started on 10 October 2026 and gains about one element set a day. Treat these
+numbers as preliminary until there are a few weeks of final results.
+
+` : ''}` : ''}## Visible passes vs Heavens-Above
 
 A pass is **visible** when the satellite is sunlit while the observer's sky is dark (Sun more than 6°
 below the horizon), **daylight** when the sky is too bright, and **unlit** when the sky is dark but the
@@ -327,7 +386,8 @@ ${visRows.join('\n')}
   from data that is already hours or days old, so real-world error is larger.
 - One snapshot of elements per satellite. A fuller study would repeat this over many element
   sets and dates.
-- The NASA comparison covers the ISS only, over one week; NASA's file is a prediction, not measured positions.
+- The NASA comparison covers the ISS only. NASA's files are predictions, not measured positions (their own drift is
+  quantified above). The many-element-set study is young and grows by about one element set a day.
 - The force table gives magnitudes only (the tidal terms are their maximum values); the effect on an
   orbit also depends on direction and on how the force averages over an orbit.
 `;

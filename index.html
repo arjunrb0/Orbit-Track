@@ -14,7 +14,7 @@
         <span class="logo" aria-hidden="true"></span>
         <div>
           <h1>Satellite Pass Tracker</h1>
-          <p class="sub">ISS &amp; ISRO satellites · own two-body propagator</p>
+          <p class="sub">ISS &amp; ISRO satellites · own orbit propagator</p>
         </div>
       </div>
       <div class="clock">
@@ -149,6 +149,26 @@
       <div class="acc-tiles"></div>
       <div class="acc-chart"><div class="acc-tooltip" hidden></div></div>
       <p class="muted acc-foot">Line: worst error in each 2-hour window. Tiles: worst error since epoch. Full tables for every satellite in docs/RESULTS.md.</p>
+      <div class="study" hidden>
+        <div class="study-head">
+          <h3>Across many element sets <span class="muted">(grows daily)</span></h3>
+          <div class="segmented" role="group" aria-label="Horizon">
+            <button data-horizon="1d" class="active">1 day</button>
+            <button data-horizon="3d">3 days</button>
+            <button data-horizon="7d">7 days</button>
+          </div>
+        </div>
+        <p class="muted study-count"></p>
+        <div class="acc-legend study-legend" aria-hidden="true">
+          <span><span class="swatch swatch-dot" style="background: var(--muted)"></span>SGP4</span>
+          <span><span class="swatch swatch-dot" style="background:#2f94d0"></span>+ J2</span>
+          <span><span class="swatch swatch-dot" style="background:#3e9e5e"></span>+ J2 + drag</span>
+          <span><span class="swatch swatch-dot swatch-hollow"></span>provisional</span>
+        </div>
+        <div class="study-chart"></div>
+        <p class="study-summary"></p>
+        <p class="muted study-truth"></p>
+      </div>
     </section>
 
     <section class="panel">
