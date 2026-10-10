@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Satellite Pass Tracker</title>
+    <meta name="description" content="Predicts ISS and ISRO satellite passes with a from-scratch orbit propagator, validated against SGP4 and Heavens-Above." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%232d6fb3'/%3E%3Cellipse cx='16' cy='16' rx='15' ry='6' fill='none' stroke='%235cc8ff' stroke-width='2' transform='rotate(-25 16 16)'/%3E%3Ccircle cx='29' cy='10' r='2.5' fill='%23ffd166'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"></span>
+        <div>
+          <h1>Satellite Pass Tracker</h1>
+          <p class="sub">ISS &amp; ISRO satellites · own two-body propagator</p>
+        </div>
+      </div>
+      <div class="clock">
+        <div class="segmented" role="group" aria-label="Propagator">
+          <button data-model="j2" class="active" title="Two-body orbit plus Earth's equatorial bulge (J2) drift">Kepler + J2</button>
+          <button data-model="kepler" title="Pure two-body orbit, no perturbations">Kepler only</button>
+        </div>
+        <div class="clock-time" id="clock">--:--:-- UTC</div>
+        <div class="segmented" role="group" aria-label="Simulation speed">
+          <button data-speed="1" class="active">1×</button>
+          <button data-speed="60">60×</button>
+          <button data-speed="600">600×</button>
+          <button data-now>Now</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="viewer" data-view="map">
+        <canvas id="map-canvas" class="view" aria-label="World map with satellite ground tracks"></canvas>
+        <canvas id="orbit-canvas" class="view" hidden aria-label="3D view of satellite orbits around Earth"></canvas>
+        <div class="viewer-overlay top-left">
+          <div class="segmented" role="group" aria-label="View">
+            <button data-view="map" class="active">Map</button>
+            <button data-view="globe">Globe</button>
+          </div>
+          <div class="segmented" role="group" aria-label="Zoom" data-for="globe" hidden>
+            <button data-zoom="10500" class="active">Low orbits</button>
+            <button data-zoom="52000">All orbits</button>
+          </div>
+        </div>
+        <div class="viewer-overlay bottom-left hint" data-for="map">
+          Ground tracks: solid = next orbit, dashed = last half orbit · dotted ring = area that can see the selected satellite
+        </div>
+        <div class="viewer-overlay bottom-left hint" data-for="globe" hidden>
+          Drag to rotate · scroll to zoom · click a satellite<br />
+          Inertial frame: the orbits stay fixed while Earth turns underneath
+        </div>
+      </section>
+
+      <aside class="side">
+        <form class="observer" id="observer-form" autocomplete="off">
+          <div class="observer-head">
+            <h2>Your location</h2>
+            <button type="button" id="geolocate" class="link-btn">Use my location</button>
+          </div>
+          <label class="preset">Place
+            <select id="obs-preset">
+              <option value="">Choose a place…</option>
+              <option value="12.9716,77.5946,0.92">Bengaluru (ISRO HQ)</option>
+              <option value="13.7199,80.2304,0.01">Sriharikota (ISRO launch site)</option>
+              <option value="28.6139,77.2090,0.22">Delhi</option>
+              <option value="19.0760,72.8777,0.01">Mumbai</option>
+              <option value="13.0827,80.2707,0.01">Chennai</option>
+              <option value="17.3850,78.4867,0.54">Hyderabad</option>
+              <option value="22.5726,88.3639,0.01">Kolkata</option>
+              <option value="1.3521,103.8198,0.02">Singapore</option>
+              <option value="25.2048,55.2708,0.01">Dubai</option>
+              <option value="51.5072,-0.1276,0.01">London</option>
+              <option value="40.7128,-74.0060,0.01">New York</option>
+              <option value="-33.8688,151.2093,0.01">Sydney</option>
+            </select>
+          </label>
+          <div class="observer-fields">
+            <label>Lat <input id="obs-lat" type="number" step="0.0001" min="-90" max="90" required /></label>
+            <label>Lon <input id="obs-lon" type="number" step="0.0001" min="-180" max="180" required /></label>
+            <button type="submit" class="small-btn">Set</button>
+          </div>
+          <p id="obs-note" class="muted obs-note"></p>
+        </form>
+        <div class="side-head">
+          <h2>Satellites</h2>
+          <span id="status" class="muted">Loading…</span>
+        </div>
+        <ul id="sat-list" class="sat-list"></ul>
+      </aside>
+    </main>
+
+    <section class="panel card-panel passes" id="passes">
+      <div class="acc-head">
+        <div>
+          <h2>Passes over your location · <span class="pass-name"></span> <span class="pass-countdown"></span></h2>
+          <p class="muted"><span class="pass-status"></span> Times in <span class="tz"></span>. Click a pass to see its path across the sky.</p>
+        </div>
+        <div class="segmented" role="group" aria-label="Minimum elevation">
+          <button data-minel="0" title="Geometric horizon">From 0°</button>
+          <button data-minel="10" class="active" title="Trees and buildings usually hide the lowest few degrees; Heavens-Above lists passes from 10°">From 10°</button>
+        </div>
+      </div>
+      <div class="pass-body">
+        <div class="table-wrap pass-list">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Rises</th><th>Highest at</th><th>Max elevation</th><th>Sets</th><th>Duration</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <figure class="sky-wrap">
+          <div class="sky"></div>
+          <figcaption class="sky-caption muted"></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="panel card-panel accuracy" id="accuracy">
+      <div class="acc-head">
+        <div>
+          <h2>Accuracy vs SGP4 · <span class="acc-name"></span></h2>
+          <p class="muted">How far this project's propagators drift from SGP4 (satellite.js), starting from the element-set epoch.
+            SGP4 is the reference these elements were made for, not ground truth.</p>
+        </div>
+        <div class="acc-legend" aria-hidden="true">
+          <span><span class="swatch" style="background:#dd6a35"></span>Kepler</span>
+          <span><span class="swatch" style="background:#2f94d0"></span>Kepler + J2</span>
+        </div>
+      </div>
+      <div class="acc-tiles"></div>
+      <div class="acc-chart"><div class="acc-tooltip" hidden></div></div>
+      <p class="muted acc-foot">Line: worst error in each 2-hour window. Tiles: worst error since epoch. Sampled every 5 minutes. Full table for every satellite in docs/RESULTS.md.</p>
+    </section>
+
+    <section class="panel">
+      <details>
+        <summary>Orbital elements (from CelesTrak OMM)</summary>
+        <div class="table-wrap">
+          <table id="elements">
+            <thead>
+              <tr>
+                <th>Satellite</th>
+                <th title="Element set epoch (UTC)">Epoch (UTC)</th>
+                <th title="Mean motion">n (rev/day)</th>
+                <th title="Eccentricity">e</th>
+                <th title="Inclination">i (°)</th>
+                <th title="Right ascension of the ascending node">Ω (°)</th>
+                <th title="Argument of perigee">ω (°)</th>
+                <th title="Mean anomaly at epoch">M (°)</th>
+                <th title="Semi-major axis from Kepler's third law">a (km)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <footer class="foot muted">
+      Positions from this project's own propagator: a two-body orbit plus the secular drift caused by Earth's equatorial
+      bulge (J2), or pure two-body if switched. No drag, Sun or Moon, so positions drift from reality as the
+      data ages (see the accuracy panel). Earth rotation uses GMST with UTC in place of
+      UT1 (up to ~0.4 km error). Data: CelesTrak. Coastlines: Natural Earth.
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

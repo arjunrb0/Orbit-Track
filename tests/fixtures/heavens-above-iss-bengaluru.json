@@ -1,0 +1,257 @@
+{
+ "source": "Heavens-Above, ISS - All Passes, https://www.heavens-above.com/PassSummary.aspx?satid=25544&lat=12.9716&lng=77.5946&loc=Bengaluru&alt=920&tz=UCT&showall=t",
+ "retrieved": "2026-10-10T10:25Z",
+ "observer": {
+  "name": "Bengaluru",
+  "latDeg": 12.9716,
+  "lonDeg": 77.5946,
+  "heightM": 920
+ },
+ "elementEpoch": "9 October 2026 (Heavens-Above reports 416 x 425 km, 51.6 deg); same element set as tests/fixtures/iss-omm.json",
+ "notes": "Times UTC. Start/End are when the ISS crosses 10 deg altitude. Altitudes rounded to whole degrees by Heavens-Above.",
+ "passes": [
+  {
+   "start": "2026-10-10T00:22:31Z",
+   "startDir": "SW",
+   "max": "2026-10-10T00:25:53Z",
+   "maxAltDeg": 85,
+   "maxDir": "WNW",
+   "end": "2026-10-10T00:29:15Z",
+   "endDir": "NE"
+  },
+  {
+   "start": "2026-10-10T10:17:02Z",
+   "startDir": "NNW",
+   "max": "2026-10-10T10:20:02Z",
+   "maxAltDeg": 30,
+   "maxDir": "NE",
+   "end": "2026-10-10T10:23:01Z",
+   "endDir": "ESE"
+  },
+  {
+   "start": "2026-10-10T23:35:32Z",
+   "startDir": "SSW",
+   "max": "2026-10-10T23:38:42Z",
+   "maxAltDeg": 39,
+   "maxDir": "SE",
+   "end": "2026-10-10T23:41:51Z",
+   "endDir": "NE"
+  },
+  {
+   "start": "2026-10-11T09:30:44Z",
+   "startDir": "NNE",
+   "max": "2026-10-11T09:32:44Z",
+   "maxAltDeg": 15,
+   "maxDir": "NE",
+   "end": "2026-10-11T09:34:43Z",
+   "endDir": "E"
+  },
+  {
+   "start": "2026-10-11T11:06:53Z",
+   "startDir": "WNW",
+   "max": "2026-10-11T11:09:24Z",
+   "maxAltDeg": 20,
+   "maxDir": "SW",
+   "end": "2026-10-11T11:11:55Z",
+   "endDir": "S"
+  },
+  {
+   "start": "2026-10-11T22:49:09Z",
+   "startDir": "S",
+   "max": "2026-10-11T22:51:31Z",
+   "maxAltDeg": 18,
+   "maxDir": "SE",
+   "end": "2026-10-11T22:53:52Z",
+   "endDir": "E"
+  },
+  {
+   "start": "2026-10-12T00:25:56Z",
+   "startDir": "W",
+   "max": "2026-10-12T00:28:10Z",
+   "maxAltDeg": 16,
+   "maxDir": "NW",
+   "end": "2026-10-12T00:30:24Z",
+   "endDir": "N"
+  },
+  {
+   "start": "2026-10-12T10:19:00Z",
+   "startDir": "NW",
+   "max": "2026-10-12T10:22:13Z",
+   "maxAltDeg": 44,
+   "maxDir": "SW",
+   "end": "2026-10-12T10:25:25Z",
+   "endDir": "SSE"
+  },
+  {
+   "start": "2026-10-12T23:37:46Z",
+   "startDir": "WSW",
+   "max": "2026-10-12T23:40:51Z",
+   "maxAltDeg": 33,
+   "maxDir": "NW",
+   "end": "2026-10-12T23:43:57Z",
+   "endDir": "NNE"
+  },
+  {
+   "start": "2026-10-13T09:31:38Z",
+   "startDir": "NNW",
+   "max": "2026-10-13T09:34:59Z",
+   "maxAltDeg": 74,
+   "maxDir": "NE",
+   "end": "2026-10-13T09:38:19Z",
+   "endDir": "SE"
+  },
+  {
+   "start": "2026-10-13T22:50:14Z",
+   "startDir": "SW",
+   "max": "2026-10-13T22:53:35Z",
+   "maxAltDeg": 81,
+   "maxDir": "NW",
+   "end": "2026-10-13T22:56:57Z",
+   "endDir": "NE"
+  },
+  {
+   "start": "2026-10-14T08:44:41Z",
+   "startDir": "NNW",
+   "max": "2026-10-14T08:47:42Z",
+   "maxAltDeg": 31,
+   "maxDir": "NE",
+   "end": "2026-10-14T08:50:43Z",
+   "endDir": "ESE"
+  },
+  {
+   "start": "2026-10-14T22:03:10Z",
+   "startDir": "SSW",
+   "max": "2026-10-14T22:06:20Z",
+   "maxAltDeg": 40,
+   "maxDir": "SE",
+   "end": "2026-10-14T22:09:31Z",
+   "endDir": "NE"
+  },
+  {
+   "start": "2026-10-15T07:58:18Z",
+   "startDir": "N",
+   "max": "2026-10-15T08:00:22Z",
+   "maxAltDeg": 15,
+   "maxDir": "NE",
+   "end": "2026-10-15T08:02:26Z",
+   "endDir": "E"
+  },
+  {
+   "start": "2026-10-15T09:34:33Z",
+   "startDir": "WNW",
+   "max": "2026-10-15T09:37:02Z",
+   "maxAltDeg": 19,
+   "maxDir": "SW",
+   "end": "2026-10-15T09:39:30Z",
+   "endDir": "S"
+  },
+  {
+   "start": "2026-10-15T21:16:42Z",
+   "startDir": "S",
+   "max": "2026-10-15T21:19:07Z",
+   "maxAltDeg": 18,
+   "maxDir": "SE",
+   "end": "2026-10-15T21:21:31Z",
+   "endDir": "ENE"
+  },
+  {
+   "start": "2026-10-15T22:53:36Z",
+   "startDir": "W",
+   "max": "2026-10-15T22:55:46Z",
+   "maxAltDeg": 16,
+   "maxDir": "NW",
+   "end": "2026-10-15T22:57:56Z",
+   "endDir": "N"
+  },
+  {
+   "start": "2026-10-16T08:46:35Z",
+   "startDir": "NW",
+   "max": "2026-10-16T08:49:47Z",
+   "maxAltDeg": 42,
+   "maxDir": "SW",
+   "end": "2026-10-16T08:52:58Z",
+   "endDir": "SSE"
+  },
+  {
+   "start": "2026-10-16T22:05:21Z",
+   "startDir": "WSW",
+   "max": "2026-10-16T22:08:24Z",
+   "maxAltDeg": 32,
+   "maxDir": "NW",
+   "end": "2026-10-16T22:11:28Z",
+   "endDir": "NNE"
+  },
+  {
+   "start": "2026-10-17T07:59:09Z",
+   "startDir": "NNW",
+   "max": "2026-10-17T08:02:30Z",
+   "maxAltDeg": 77,
+   "maxDir": "NE",
+   "end": "2026-10-17T08:05:51Z",
+   "endDir": "SE"
+  },
+  {
+   "start": "2026-10-17T21:17:44Z",
+   "startDir": "SW",
+   "max": "2026-10-17T21:21:05Z",
+   "maxAltDeg": 79,
+   "maxDir": "NW",
+   "end": "2026-10-17T21:24:26Z",
+   "endDir": "NE"
+  },
+  {
+   "start": "2026-10-18T07:12:08Z",
+   "startDir": "NNW",
+   "max": "2026-10-18T07:15:11Z",
+   "maxAltDeg": 32,
+   "maxDir": "NE",
+   "end": "2026-10-18T07:18:13Z",
+   "endDir": "ESE"
+  },
+  {
+   "start": "2026-10-18T20:30:36Z",
+   "startDir": "SSW",
+   "max": "2026-10-18T20:33:47Z",
+   "maxAltDeg": 41,
+   "maxDir": "SE",
+   "end": "2026-10-18T20:36:58Z",
+   "endDir": "NE"
+  },
+  {
+   "start": "2026-10-19T06:25:40Z",
+   "startDir": "N",
+   "max": "2026-10-19T06:27:47Z",
+   "maxAltDeg": 16,
+   "maxDir": "NE",
+   "end": "2026-10-19T06:29:55Z",
+   "endDir": "E"
+  },
+  {
+   "start": "2026-10-19T08:02:00Z",
+   "startDir": "WNW",
+   "max": "2026-10-19T08:04:26Z",
+   "maxAltDeg": 19,
+   "maxDir": "SW",
+   "end": "2026-10-19T08:06:53Z",
+   "endDir": "S"
+  },
+  {
+   "start": "2026-10-19T19:44:04Z",
+   "startDir": "S",
+   "max": "2026-10-19T19:46:30Z",
+   "maxAltDeg": 19,
+   "maxDir": "SE",
+   "end": "2026-10-19T19:48:56Z",
+   "endDir": "ENE"
+  },
+  {
+   "start": "2026-10-19T21:21:03Z",
+   "startDir": "W",
+   "max": "2026-10-19T21:23:08Z",
+   "maxAltDeg": 16,
+   "maxDir": "NW",
+   "end": "2026-10-19T21:25:15Z",
+   "endDir": "N"
+  }
+ ]
+}

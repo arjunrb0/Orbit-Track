@@ -1,0 +1,23 @@
+{
+  "name": "orbit-track",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Predicts ISS and ISRO satellite passes with a from-scratch two-body propagator, compared against SGP4.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test",
+    "fetch-data": "node scripts/fetch-data.mjs",
+    "compare": "node scripts/compare-sgp4.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "satellite.js": "^7.1.0",
+    "vite": "^8.3.4",
+    "world-atlas": "^2.0.2"
+  }
+}
