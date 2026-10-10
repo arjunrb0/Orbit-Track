@@ -6,17 +6,19 @@ the industry-standard SGP4 model and checks the predictions against Heavens-Abov
 
 **Live demo: https://arjunrb0.github.io/Orbit-Track/**
 
-![Orbit Track: world map with ground tracks, satellite list, and upcoming ISS passes over Bengaluru](docs/screenshot.jpg)
+![Orbit Track: world map with day and night, ground tracks, satellite list, and upcoming ISS passes over Bengaluru with visible passes flagged](docs/screenshot.jpg)
 
 ## What it does
 
 - Downloads live orbital data (CelesTrak OMM/JSON) once a day with a scheduled GitHub Action.
-- Propagates each orbit with a **two-body (Kepler) model**, optionally with the **J2 secular
-  correction** for Earth's equatorial bulge. Both are written from scratch: no orbital libraries.
+- Propagates each orbit with a **two-body (Kepler) model**, plus the **J2 secular correction** for
+  Earth's equatorial bulge and a **drag term** from the element set's own ṅ. All written from scratch:
+  no orbital libraries.
 - Converts positions through the time and coordinate frames needed for observers: Julian
   date → sidereal time → Earth-fixed → latitude/longitude, and East-North-Up → azimuth/elevation.
-- Lists upcoming passes over your location (rise, highest point, set, directions), with a sky plot,
-  ground tracks on a world map, and a 3D orbit view.
+- Lists upcoming passes over your location (rise, highest point, set, directions) and flags the ones
+  you can **see with the naked eye** (satellite sunlit, your sky dark). Includes a sky plot, ground tracks
+  on a world map with day and night, and a 3D orbit view.
 - Shows, for each satellite, how far the propagator drifts from SGP4 over a week.
 
 [satellite.js](https://github.com/shashwatak/satellite-js) (SGP4) is used **only as a reference**
@@ -28,11 +30,12 @@ Full tables for every satellite: [docs/RESULTS.md](docs/RESULTS.md) (generated b
 
 **Position error compared with SGP4**, worst error within each window, from the element-set epoch:
 
-| | 1 hour | 1 day | 1 week |
-|---|---|---|---|
-| Low orbits, pure Kepler | 15–37 km | 414–868 km | 2,875–5,916 km |
-| Low orbits, Kepler + J2 | 10–17 km | 12–19 km | 29–150 km |
-| Geosynchronous, Kepler / + J2 | 20–28 km | 27–33 km | 27–60 km |
+| | 1 day | 1 week |
+|---|---|---|
+| Low orbits, pure Kepler | 414–868 km | 2,875–5,916 km |
+| Low orbits, Kepler + J2 | 12–19 km | 29–150 km |
+| Low orbits, Kepler + J2 + drag | 11–18 km | 15–47 km |
+| Geosynchronous, Kepler / + J2 | 27–33 km | 27–60 km |
 
 **ISS pass predictions over Bengaluru vs [Heavens-Above](https://www.heavens-above.com)**
 (27 passes, 10–20 October 2026, same element set):
@@ -40,8 +43,11 @@ Full tables for every satellite: [docs/RESULTS.md](docs/RESULTS.md) (generated b
 | Propagator | Passes found | Within 1 minute | Worst error, day 1 → day 10 |
 |---|---|---|---|
 | SGP4 + this project's pass search and coordinate code | 27/27 | 27/27 | 1 s → 1 s |
+| Kepler + J2 + drag (from scratch) | 27/27 | 27/27 | 2 s → 3 s |
 | Kepler + J2 (from scratch) | 27/27 | 27/27 | 2 s → 40 s |
 | Pure Kepler (from scratch) | 8/27 | 5/27 | (most passes missed) |
+
+**Visible-pass labels** (visible / daylight / in Earth's shadow) match Heavens-Above for **27 of 27** passes.
 
 What the numbers mean:
 
@@ -49,10 +55,17 @@ What the numbers mean:
   orbital plane round by about 5° per day and changes the orbital period slightly.
 - **Adding J2's secular drift closes over 95% of the gap** to SGP4 for low orbits. The J2 rates
   agree with SGP4's own internal rates to within 0.1–0.7%.
-- **The ISS's remaining error after a week is atmospheric drag.** It is almost entirely
-  along-track and grows like t². The element set's own drag term predicts ≈135 km; measured: ≈150 km.
-- **Pass times are forgiving.** 150 km of along-track error is only ~20 s at 7.7 km/s, which is why
-  the J2 model stays within a minute of Heavens-Above for 10 days.
+- **The ISS's remaining J2 error after a week is atmospheric drag.** It is almost entirely
+  along-track and grows like t², as the element set's ṅ predicts (≈136 km after 7 days). Adding that
+  drag term cuts the ISS's 1-week error from 150 km to 15 km.
+- **Pass times are forgiving.** 150 km of along-track error is only ~20 s at 7.7 km/s. With drag, the
+  predictions stay within 3 s of Heavens-Above for all 10 days.
+- **Low and high orbits are different regimes.** At the ISS, J2 is ~10,000× stronger than the Moon's pull,
+  so J2 + drag captures almost everything. At geostationary height J2 is 38× weaker relative to gravity
+  and the Moon's tidal pull is about as large as J2 itself. A J2-only model is therefore incomplete there,
+  and the corrections don't reliably help (plain Kepler is already within 27–60 km after a week, only
+  0.04–0.1° as seen from the ground). Full analysis with a force-by-force table:
+  [Low orbits vs high orbits](docs/RESULTS.md#low-orbits-vs-high-orbits).
 - **The first row of the pass table tests everything except the propagator.** Heavens-Above uses
   SGP4, so feeding SGP4 positions through this project's sidereal time, frame conversions, look
   angles and pass search reproduces its list to the second.
@@ -61,14 +74,17 @@ What the numbers mean:
 
 - **SGP4 is the yardstick, not the truth.** It is itself ~1 km off at epoch and drifts a few km per
   day for low orbits. No comparison against true positions (e.g. GPS-derived ISS ephemerides) yet.
-- **Not modelled:** atmospheric drag, J2's short-period terms, higher harmonics (J3, J4), the Sun
-  and Moon. For geosynchronous orbits J2 alone gives mixed results (it improves IRNSS-1I but makes
-  INSAT-3DR worse), because SGP4's deep-space mode includes lunisolar terms that partly cancel J2.
+- **Not modelled:** J2's short-period terms, higher harmonics (J3, J4), the Sun's and Moon's gravity.
+  Drag is a simple constant-ṅ term taken from the element set, not a physical atmosphere model. For
+  geosynchronous orbits J2 alone gives mixed results (it improves IRNSS-1I but makes INSAT-3DR worse),
+  because SGP4's deep-space mode includes lunisolar terms that partly cancel J2.
 - **Element-set errors:** CelesTrak elements are SGP4 *mean* elements, not a true snapshot of the
   orbit, so even at the epoch the from-scratch models are 3–28 km from SGP4.
 - **Earth rotation** uses UTC in place of UT1 (up to ~0.4 km ground error) and ignores polar motion.
-- **Passes are geometric.** Atmospheric refraction isn't modelled, and the app doesn't yet say whether
-  a pass is *visible* (satellite sunlit, observer in darkness).
+- **Passes are geometric.** Atmospheric refraction isn't modelled. Visibility uses a spherical Earth
+  shadow (no penumbra, no atmosphere) and doesn't estimate brightness (magnitude).
+- **Visibility labels follow the listed pass.** Heavens-Above labels the whole pass down to 0°; the app
+  labels the part above your chosen minimum elevation. This differs for one of the 27 test passes.
 - **One snapshot:** results are for one element set per satellite. A fuller study would repeat this
   over many dates.
 
@@ -85,9 +101,12 @@ Every module is tested against **independent** references, not against its own d
 | Julian date, sidereal time, frames | Vallado Examples 3-3, 3-4, 3-5; Vallado (2006) TEME example to 0.1 m; WGS-84 polar radius |
 | Ground tracks | Max latitude = inclination; westward shift per orbit = Earth's rotation in one period |
 | J2 model | SGP4's internal un-Kozai mean motion (to 1e-10) and secular rates; ISS node rate ≈ −5°/day; sun-synchronous rate 0.9856°/day |
+| Drag term | ISS 1-week error vs SGP4 cut tenfold; no effect on deep-space orbits |
 | Pass prediction | Heavens-Above (27 passes); geometric maximum pass duration; geostationary elevation formula |
+| Sun position | 2026 March equinox and June solstice (declination), perihelion and aphelion (distance) |
+| Earth's shadow, visibility | satellite.js shadow function (outside penumbra); Heavens-Above visible/daylight/unlit labels (27/27) |
 
-57 tests run with Node's built-in test runner. A failing test blocks deployment. Bugs found along the
+67 tests run with Node's built-in test runner. A failing test blocks deployment. Bugs found along the
 way, and how they were caught, are recorded in the [development log](docs/LOG.md).
 
 ## How it works
@@ -118,10 +137,15 @@ The key steps:
 3. **Position and velocity** in the orbit's own plane, then three rotations (ω, i, Ω) into space.
 4. **J2 secular drift:** the node regresses at `−(3/2) n J2 (R/p)² cos i`, and the perigee and mean
    anomaly drift similarly. SGP4's "un-Kozai" mean-motion conversion is applied first.
-5. **Earth rotation:** rotate by Greenwich Mean Sidereal Time (IAU-82) into Earth-fixed coordinates.
+5. **Drag:** the element set's ṅ/2 adds `2π (ṅ/2) Δt²` to the mean anomaly as the orbit sinks
+   and speeds up (low orbits only).
+6. **Earth rotation:** rotate by Greenwich Mean Sidereal Time (IAU-82) into Earth-fixed coordinates.
    Latitude on the WGS-84 ellipsoid is found iteratively.
-6. **Passes:** scan elevation every 60 s, bisect each horizon crossing to 0.1 s, golden-section
+7. **Passes:** scan elevation every 60 s, bisect each horizon crossing to 0.1 s, golden-section
    search for the highest point, and refine near-miss peaks so grazing passes aren't skipped.
+8. **Visibility:** the Sun's position from the *Astronomical Almanac* low-precision formula. A satellite
+   is in shadow when, seen from it, the Sun's centre is behind Earth's disc (angle < asin(R/r)). A pass is
+   visible when the satellite is sunlit while the Sun is more than 6° below the observer's horizon.
 
 ## Satellites
 
@@ -154,12 +178,12 @@ Other scripts: `npm test` (test suite), `npm run build` (production build into `
 
 ```
 src/data/       TLE/OMM parsing, satellite catalogue, coastline decoding
-src/orbit/      constants, vectors, Kepler propagator, J2, time, coordinate frames
+src/orbit/      constants, vectors, Kepler propagator, J2 and drag, time, frames, Sun and shadow
 src/passes/     pass prediction
 src/analysis/   comparison against SGP4
 src/ui/         map, 3D globe, pass panel and sky plot, accuracy chart
 scripts/        daily data fetch, SGP4 comparison report
-tests/          57 tests, with fixtures (ISS element set, Heavens-Above passes)
+tests/          67 tests, with fixtures (ISS element set, Heavens-Above passes and labels)
 docs/           results, development log
 .github/        CI: test → build → deploy to Pages; daily data update
 ```

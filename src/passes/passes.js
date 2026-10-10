@@ -23,6 +23,11 @@
 import { DEG } from '../orbit/constants.js';
 import { propagateJ2 } from '../orbit/j2.js';
 import { temeToEcef, lookAngles } from '../orbit/frames.js';
+import { sunPosition, isSunlit } from '../orbit/sun.js';
+
+// The sky counts as dark once the Sun is 6 deg below the horizon (the end of
+// civil twilight); before that, a satellite is hard to pick out.
+export const DARK_SKY_SUN_ELEVATION_DEG = -6;
 
 const BISECT_TOLERANCE_MS = 100;
 const GOLDEN = (Math.sqrt(5) - 1) / 2; // 0.618...
@@ -135,16 +140,37 @@ export function findPasses(el, observer, { start, end, stepMs = 60e3, minElevati
   return { status: passes.length ? 'passes' : 'never-up', passes };
 }
 
-/** Points along a pass for drawing a sky plot: [{ t, azDeg, elDeg }]. */
+/**
+ * Points along a pass for drawing a sky plot: [{ t, azDeg, elDeg, sunlit, sunElDeg }].
+ * `sunlit`: the satellite is in sunlight. `sunElDeg`: the Sun's elevation for the observer.
+ */
 export function passTrack(el, observer, pass, stepMs = 10e3, propagate = propagateJ2) {
   const out = [];
-  for (let t = pass.rise.t; t < pass.set.t; t += stepMs) {
-    const l = lookAt(el, observer, t, propagate);
-    out.push({ t, azDeg: l.azimuth / DEG, elDeg: l.elevation / DEG });
-  }
-  const l = lookAt(el, observer, pass.set.t, propagate);
-  out.push({ t: pass.set.t, azDeg: l.azimuth / DEG, elDeg: l.elevation / DEG });
+  const add = (t) => {
+    const { r } = propagate(el, t);
+    const l = lookAngles(temeToEcef(r, t), observer);
+    const sun = sunPosition(t);
+    const sunEl = lookAngles(temeToEcef(sun, t), observer).elevation;
+    out.push({ t, azDeg: l.azimuth / DEG, elDeg: l.elevation / DEG, sunlit: isSunlit(r, sun), sunElDeg: sunEl / DEG });
+  };
+  for (let t = pass.rise.t; t < pass.set.t; t += stepMs) add(t);
+  add(pass.set.t);
   return out;
+}
+
+/**
+ * Can you see it? Classifies a pass the way Heavens-Above does:
+ *   'visible'  - at some point the satellite is sunlit while the sky is dark
+ *   'unlit'    - the sky is dark but the satellite is in Earth's shadow throughout
+ *   'daylight' - the sky is too bright (Sun above -6 deg)
+ * For visible passes, also gives when the visible part starts and ends.
+ */
+export function passVisibility(el, observer, pass, propagate = propagateJ2, stepMs = 2e3) {
+  const track = passTrack(el, observer, pass, stepMs, propagate);
+  const seen = track.filter((p) => p.sunlit && p.sunElDeg < DARK_SKY_SUN_ELEVATION_DEG);
+  if (seen.length) return { type: 'visible', from: seen[0].t, to: seen.at(-1).t, track };
+  const atMax = track.reduce((a, b) => (b.elDeg > a.elDeg ? b : a));
+  return { type: atMax.sunElDeg < DARK_SKY_SUN_ELEVATION_DEG ? 'unlit' : 'daylight', track };
 }
 
 /** 16-point compass name for an azimuth in degrees. */

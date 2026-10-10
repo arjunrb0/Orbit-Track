@@ -10,7 +10,8 @@
 
 import { DEG, R_EARTH, TWO_PI } from '../orbit/constants.js';
 import { toKeplerian } from '../orbit/kepler.js';
-import { subSatellitePoint } from '../orbit/frames.js';
+import { subSatellitePoint, temeToEcef } from '../orbit/frames.js';
+import { sunPosition } from '../orbit/sun.js';
 import { landRings } from '../data/land.js';
 
 const TRACK_SAMPLES = 360;
@@ -127,6 +128,44 @@ export function createMapView(canvas, satellites, { getTime, getObserver, onSele
     ctx.setLineDash([]);
   }
 
+  // Night side: everything more than 90 deg from the point where the Sun is
+  // overhead. The boundary (terminator) is a great circle, so for each
+  // longitude its latitude is  tan(lat) = -cos(lon - lonSun) / tan(decSun).
+  function drawNight(b, t) {
+    const s = temeToEcef(sunPosition(t), t);
+    const lonSun = Math.atan2(s[1], s[0]);
+    let dec = Math.asin(s[2] / Math.hypot(...s));
+    if (Math.abs(dec) < 1e-4) dec = 1e-4 * Math.sign(dec || 1); // equinox: avoid dividing by ~0
+    const pts = [];
+    for (let lon = -180; lon <= 180; lon += 2) {
+      pts.push(toXY(lon, Math.atan(-Math.cos(lon * DEG - lonSun) / Math.tan(dec)) / DEG, b));
+    }
+    // With the Sun north of the equator the south pole is in night, and vice versa.
+    const poleY = dec > 0 ? b.y0 + b.h : b.y0;
+    ctx.beginPath();
+    pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.lineTo(b.x0 + b.w, poleY);
+    ctx.lineTo(b.x0, poleY);
+    ctx.closePath();
+    ctx.fillStyle = css('--night');
+    ctx.fill();
+    // Sun marker at the sub-solar point
+    const [sx, sy] = toXY(lonSun / DEG, dec / DEG, b);
+    ctx.fillStyle = '#ffd166';
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5, 0, TWO_PI);
+    ctx.fill();
+    ctx.beginPath();
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * TWO_PI;
+      ctx.moveTo(sx + 8 * Math.cos(a), sy + 8 * Math.sin(a));
+      ctx.lineTo(sx + 11 * Math.cos(a), sy + 11 * Math.sin(a));
+    }
+    ctx.stroke();
+  }
+
   function drawObserver(b) {
     const obs = getObserver();
     if (!obs) return;
@@ -190,6 +229,12 @@ export function createMapView(canvas, satellites, { getTime, getObserver, onSele
     ctx.clearRect(0, 0, width, height);
     const b = box();
     drawBase(b);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(b.x0, b.y0, b.w, b.h);
+    ctx.clip();
+    drawNight(b, t);
+    ctx.restore();
 
     ctx.save();
     ctx.beginPath();

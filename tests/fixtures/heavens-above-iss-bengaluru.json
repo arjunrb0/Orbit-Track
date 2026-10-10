@@ -8,7 +8,7 @@
   "heightM": 920
  },
  "elementEpoch": "9 October 2026 (Heavens-Above reports 416 x 425 km, 51.6 deg); same element set as tests/fixtures/iss-omm.json",
- "notes": "Times UTC. Start/End are when the ISS crosses 10 deg altitude. Altitudes rounded to whole degrees by Heavens-Above.",
+ "notes": "Times UTC. Start/End are when the ISS crosses 10 deg altitude. Altitudes rounded to whole degrees by Heavens-Above. 'type' is Heavens-Above's pass type: visible, daylight, or night (unlit) recorded here as 'unlit'.",
  "passes": [
   {
    "start": "2026-10-10T00:22:31Z",
@@ -17,7 +17,8 @@
    "maxAltDeg": 85,
    "maxDir": "WNW",
    "end": "2026-10-10T00:29:15Z",
-   "endDir": "NE"
+   "endDir": "NE",
+   "type": "daylight"
   },
   {
    "start": "2026-10-10T10:17:02Z",
@@ -26,7 +27,8 @@
    "maxAltDeg": 30,
    "maxDir": "NE",
    "end": "2026-10-10T10:23:01Z",
-   "endDir": "ESE"
+   "endDir": "ESE",
+   "type": "daylight"
   },
   {
    "start": "2026-10-10T23:35:32Z",
@@ -35,7 +37,8 @@
    "maxAltDeg": 39,
    "maxDir": "SE",
    "end": "2026-10-10T23:41:51Z",
-   "endDir": "NE"
+   "endDir": "NE",
+   "type": "visible"
   },
   {
    "start": "2026-10-11T09:30:44Z",
@@ -44,7 +47,8 @@
    "maxAltDeg": 15,
    "maxDir": "NE",
    "end": "2026-10-11T09:34:43Z",
-   "endDir": "E"
+   "endDir": "E",
+   "type": "daylight"
   },
   {
    "start": "2026-10-11T11:06:53Z",
@@ -53,7 +57,8 @@
    "maxAltDeg": 20,
    "maxDir": "SW",
    "end": "2026-10-11T11:11:55Z",
-   "endDir": "S"
+   "endDir": "S",
+   "type": "daylight"
   },
   {
    "start": "2026-10-11T22:49:09Z",
@@ -62,7 +67,8 @@
    "maxAltDeg": 18,
    "maxDir": "SE",
    "end": "2026-10-11T22:53:52Z",
-   "endDir": "E"
+   "endDir": "E",
+   "type": "visible"
   },
   {
    "start": "2026-10-12T00:25:56Z",
@@ -71,7 +77,8 @@
    "maxAltDeg": 16,
    "maxDir": "NW",
    "end": "2026-10-12T00:30:24Z",
-   "endDir": "N"
+   "endDir": "N",
+   "type": "daylight"
   },
   {
    "start": "2026-10-12T10:19:00Z",
@@ -80,7 +87,8 @@
    "maxAltDeg": 44,
    "maxDir": "SW",
    "end": "2026-10-12T10:25:25Z",
-   "endDir": "SSE"
+   "endDir": "SSE",
+   "type": "daylight"
   },
   {
    "start": "2026-10-12T23:37:46Z",
@@ -89,7 +97,8 @@
    "maxAltDeg": 33,
    "maxDir": "NW",
    "end": "2026-10-12T23:43:57Z",
-   "endDir": "NNE"
+   "endDir": "NNE",
+   "type": "visible"
   },
   {
    "start": "2026-10-13T09:31:38Z",
@@ -98,7 +107,8 @@
    "maxAltDeg": 74,
    "maxDir": "NE",
    "end": "2026-10-13T09:38:19Z",
-   "endDir": "SE"
+   "endDir": "SE",
+   "type": "daylight"
   },
   {
    "start": "2026-10-13T22:50:14Z",
@@ -107,7 +117,8 @@
    "maxAltDeg": 81,
    "maxDir": "NW",
    "end": "2026-10-13T22:56:57Z",
-   "endDir": "NE"
+   "endDir": "NE",
+   "type": "visible"
   },
   {
    "start": "2026-10-14T08:44:41Z",
@@ -116,7 +127,8 @@
    "maxAltDeg": 31,
    "maxDir": "NE",
    "end": "2026-10-14T08:50:43Z",
-   "endDir": "ESE"
+   "endDir": "ESE",
+   "type": "daylight"
   },
   {
    "start": "2026-10-14T22:03:10Z",
@@ -125,7 +137,8 @@
    "maxAltDeg": 40,
    "maxDir": "SE",
    "end": "2026-10-14T22:09:31Z",
-   "endDir": "NE"
+   "endDir": "NE",
+   "type": "unlit"
   },
   {
    "start": "2026-10-15T07:58:18Z",
@@ -134,7 +147,8 @@
    "maxAltDeg": 15,
    "maxDir": "NE",
    "end": "2026-10-15T08:02:26Z",
-   "endDir": "E"
+   "endDir": "E",
+   "type": "daylight"
   },
   {
    "start": "2026-10-15T09:34:33Z",
@@ -143,7 +157,8 @@
    "maxAltDeg": 19,
    "maxDir": "SW",
    "end": "2026-10-15T09:39:30Z",
-   "endDir": "S"
+   "endDir": "S",
+   "type": "daylight"
   },
   {
    "start": "2026-10-15T21:16:42Z",
@@ -152,7 +167,8 @@
    "maxAltDeg": 18,
    "maxDir": "SE",
    "end": "2026-10-15T21:21:31Z",
-   "endDir": "ENE"
+   "endDir": "ENE",
+   "type": "unlit"
   },
   {
    "start": "2026-10-15T22:53:36Z",
@@ -161,7 +177,8 @@
    "maxAltDeg": 16,
    "maxDir": "NW",
    "end": "2026-10-15T22:57:56Z",
-   "endDir": "N"
+   "endDir": "N",
+   "type": "visible"
   },
   {
    "start": "2026-10-16T08:46:35Z",
@@ -170,7 +187,8 @@
    "maxAltDeg": 42,
    "maxDir": "SW",
    "end": "2026-10-16T08:52:58Z",
-   "endDir": "SSE"
+   "endDir": "SSE",
+   "type": "daylight"
   },
   {
    "start": "2026-10-16T22:05:21Z",
@@ -179,7 +197,8 @@
    "maxAltDeg": 32,
    "maxDir": "NW",
    "end": "2026-10-16T22:11:28Z",
-   "endDir": "NNE"
+   "endDir": "NNE",
+   "type": "unlit"
   },
   {
    "start": "2026-10-17T07:59:09Z",
@@ -188,7 +207,8 @@
    "maxAltDeg": 77,
    "maxDir": "NE",
    "end": "2026-10-17T08:05:51Z",
-   "endDir": "SE"
+   "endDir": "SE",
+   "type": "daylight"
   },
   {
    "start": "2026-10-17T21:17:44Z",
@@ -197,7 +217,8 @@
    "maxAltDeg": 79,
    "maxDir": "NW",
    "end": "2026-10-17T21:24:26Z",
-   "endDir": "NE"
+   "endDir": "NE",
+   "type": "unlit"
   },
   {
    "start": "2026-10-18T07:12:08Z",
@@ -206,7 +227,8 @@
    "maxAltDeg": 32,
    "maxDir": "NE",
    "end": "2026-10-18T07:18:13Z",
-   "endDir": "ESE"
+   "endDir": "ESE",
+   "type": "daylight"
   },
   {
    "start": "2026-10-18T20:30:36Z",
@@ -215,7 +237,8 @@
    "maxAltDeg": 41,
    "maxDir": "SE",
    "end": "2026-10-18T20:36:58Z",
-   "endDir": "NE"
+   "endDir": "NE",
+   "type": "unlit"
   },
   {
    "start": "2026-10-19T06:25:40Z",
@@ -224,7 +247,8 @@
    "maxAltDeg": 16,
    "maxDir": "NE",
    "end": "2026-10-19T06:29:55Z",
-   "endDir": "E"
+   "endDir": "E",
+   "type": "daylight"
   },
   {
    "start": "2026-10-19T08:02:00Z",
@@ -233,7 +257,8 @@
    "maxAltDeg": 19,
    "maxDir": "SW",
    "end": "2026-10-19T08:06:53Z",
-   "endDir": "S"
+   "endDir": "S",
+   "type": "daylight"
   },
   {
    "start": "2026-10-19T19:44:04Z",
@@ -242,7 +267,8 @@
    "maxAltDeg": 19,
    "maxDir": "SE",
    "end": "2026-10-19T19:48:56Z",
-   "endDir": "ENE"
+   "endDir": "ENE",
+   "type": "unlit"
   },
   {
    "start": "2026-10-19T21:21:03Z",
@@ -251,7 +277,8 @@
    "maxAltDeg": 16,
    "maxDir": "NW",
    "end": "2026-10-19T21:25:15Z",
-   "endDir": "N"
+   "endDir": "N",
+   "type": "unlit"
   }
  ]
 }

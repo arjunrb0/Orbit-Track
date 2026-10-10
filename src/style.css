@@ -17,6 +17,7 @@
   --coast: rgba(140, 175, 230, 0.35);
   --globe-land: rgba(120, 190, 140, 0.55);
   --good: #6ee7a0;
+  --night: rgba(2, 5, 14, 0.5);
   --radius: 12px;
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   color: var(--text);
@@ -198,6 +199,10 @@ canvas.view[hidden] { display: none; }
 }
 .pass-countdown:empty { display: none; }
 .pass-countdown.up { color: var(--good); border-color: rgba(110, 231, 160, 0.4); }
+.pass-controls { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.vis { font-size: 0.72rem; padding: 0.12rem 0.5rem; border-radius: 99px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.vis-visible { color: #ffd166; border-color: rgba(255, 209, 102, 0.45); font-weight: 600; }
+.vis-visible::before { content: '★ '; }
 .sat .next { grid-column: 2 / 4; font-size: 0.75rem; color: var(--muted); }
 .sat .next.up { color: var(--good); }
 
@@ -220,6 +225,17 @@ tr + tr td { border-top: 1px solid rgba(33, 43, 69, 0.6); }
   .topbar, .panel, .foot { padding-left: 1rem; padding-right: 1rem; }
   .panel.card-panel { margin: 0 1rem 1rem; }
   .pass-body { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  /* Keep date, rise, max elevation and visibility; drop the rest on phones. */
+  .pass-list th:nth-child(3), .pass-list td:nth-child(3),
+  .pass-list th:nth-child(5), .pass-list td:nth-child(5),
+  .pass-list th:nth-child(6), .pass-list td:nth-child(6) { display: none; }
+  .pass-list table { font-size: 0.74rem; }
+  .pass-list th, .pass-list td { padding: 0.4rem 0.3rem; }
+  .pass-list th { white-space: normal; vertical-align: bottom; }
+  .vis { padding: 0.08rem 0.35rem; }
+  .pass-list .secs { display: none; }
   .acc-tiles { grid-template-columns: 1fr; }
   /* Let the viewer take the shape of what it shows: a wide map or a square globe. */
   .viewer { height: auto; min-height: 0; aspect-ratio: 1; }

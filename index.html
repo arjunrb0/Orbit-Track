@@ -19,8 +19,9 @@
       </div>
       <div class="clock">
         <div class="segmented" role="group" aria-label="Propagator">
-          <button data-model="j2" class="active" title="Two-body orbit plus Earth's equatorial bulge (J2) drift">Kepler + J2</button>
-          <button data-model="kepler" title="Pure two-body orbit, no perturbations">Kepler only</button>
+          <button data-model="kepler" title="Pure two-body orbit, no perturbations">Kepler</button>
+          <button data-model="j2" title="Two-body orbit plus Earth's equatorial bulge (J2) drift">+ J2</button>
+          <button data-model="drag" class="active" title="Plus atmospheric drag estimated from the element set's n-dot (low orbits only)">+ J2 + drag</button>
         </div>
         <div class="clock-time" id="clock">--:--:-- UTC</div>
         <div class="segmented" role="group" aria-label="Simulation speed">
@@ -99,16 +100,22 @@
           <h2>Passes over your location · <span class="pass-name"></span> <span class="pass-countdown"></span></h2>
           <p class="muted"><span class="pass-status"></span> Times in <span class="tz"></span>. Click a pass to see its path across the sky.</p>
         </div>
+        <div class="pass-controls">
+        <div class="segmented" role="group" aria-label="Which passes">
+          <button data-visfilter="all" class="active">All passes</button>
+          <button data-visfilter="visible" title="Sunlit satellite against a dark sky">Visible only</button>
+        </div>
         <div class="segmented" role="group" aria-label="Minimum elevation">
           <button data-minel="0" title="Geometric horizon">From 0°</button>
           <button data-minel="10" class="active" title="Trees and buildings usually hide the lowest few degrees; Heavens-Above lists passes from 10°">From 10°</button>
+        </div>
         </div>
       </div>
       <div class="pass-body">
         <div class="table-wrap pass-list">
           <table>
             <thead>
-              <tr><th>Date</th><th>Rises</th><th>Highest at</th><th>Max elevation</th><th>Sets</th><th>Duration</th></tr>
+              <tr><th>Date</th><th>Rises</th><th>Highest at</th><th>Max elevation</th><th>Sets</th><th>Duration</th><th>Can you see it?</th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -129,7 +136,8 @@
         </div>
         <div class="acc-legend" aria-hidden="true">
           <span><span class="swatch" style="background:#dd6a35"></span>Kepler</span>
-          <span><span class="swatch" style="background:#2f94d0"></span>Kepler + J2</span>
+          <span><span class="swatch" style="background:#2f94d0"></span>+ J2</span>
+          <span><span class="swatch" style="background:#3e9e5e"></span>+ J2 + drag</span>
         </div>
       </div>
       <div class="acc-tiles"></div>
@@ -163,8 +171,8 @@
 
     <footer class="foot muted">
       Positions from this project's own propagator: a two-body orbit plus the secular drift caused by Earth's equatorial
-      bulge (J2), or pure two-body if switched. No drag, Sun or Moon, so positions drift from reality as the
-      data ages (see the accuracy panel). Earth rotation uses GMST with UTC in place of
+      bulge (J2) and a simple drag term from the element set's n-dot (switchable in the header). No Sun or Moon,
+      so positions drift from reality as the data ages (see the accuracy panel). Earth rotation uses GMST with UTC in place of
       UT1 (up to ~0.4 km error). Data: CelesTrak. Coastlines: Natural Earth.
     </footer>
 

@@ -196,3 +196,37 @@ details in [RESULTS.md](RESULTS.md))
 **Bugs**
 - The sky plot could render while its box measured ~0 px wide, giving negative SVG radii (seen as
   console errors). Fixed by clamping the plot size.
+
+## Stretch goals: drag, visible passes, low vs high orbits (2026-10-10)
+
+**Built**
+- Drag term from the element set's ṅ (`propagateJ2Drag`): extra mean anomaly 2π(ṅ/2)Δt² and a
+  matching shrinking orbit. Applied only below SGP4's 225-minute "deep space" line, since there is
+  no air at geosynchronous height. Now the app's default propagator.
+- Sun position (Astronomical Almanac low-precision formula), Earth-shadow test, and pass visibility
+  (visible / daylight / unlit). The pass list has a visibility column and a "Visible only" filter; the
+  sky plot draws the in-shadow part of a pass dashed; the map and globe show day and night.
+- Low vs high orbit analysis in [RESULTS.md](RESULTS.md), including a force-by-force table computed
+  from textbook constants.
+
+**Results**
+- ISS 1-week error vs SGP4: 150 km (J2) → 15 km (J2 + drag). Low-orbit range with drag: 15–47 km.
+- ISS passes vs Heavens-Above: every pass within 3 s for all 10 days (was 40 s by day 10 with J2 only).
+- Visibility labels match Heavens-Above for 27/27 passes (labelling down to 0°, as Heavens-Above does).
+- Shadow model agrees with satellite.js's shadow function at all ~2,000 sampled positions outside penumbra.
+- Sun position matches the 2026 equinox and solstice declinations and the perihelion/aphelion distances.
+
+**Bugs and surprises**
+- First drag version also applied ṅ to the geosynchronous satellites, which helped one and hurt the
+  other. At that height ṅ isn't drag but a fitted number absorbing Sun/Moon effects and
+  station-keeping. Restricted to near-Earth orbits.
+- One visibility label (15 Oct) initially disagreed with Heavens-Above. Investigation showed it wasn't
+  a borderline shadow case: the ISS stays 8° deep in shadow above 10° and only reaches sunlight at 0.5°
+  elevation, 9 s before setting. Heavens-Above labels the whole pass down to 0°. A definition difference,
+  documented rather than "fixed".
+- An early draft of the orbit-regime table claimed a "best model" that, for INSAT-3DR, was worse than plain
+  Kepler. Replaced with Kepler vs J2 + drag side by side.
+
+**Limitations**
+- Drag uses a constant ṅ; real drag changes with solar activity, and the ISS reboosts.
+- No brightness (magnitude) estimate; no penumbra; no atmospheric refraction.

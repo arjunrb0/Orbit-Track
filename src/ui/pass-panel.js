@@ -6,7 +6,7 @@
 // like a map. (Star charts held overhead put east on the left; this one is
 // meant to be read like a map of the sky's directions.)
 
-import { findPasses, passTrack, lookAt, compass16 } from '../passes/passes.js';
+import { findPasses, passVisibility, lookAt, compass16 } from '../passes/passes.js';
 import { DEG } from '../orbit/constants.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -24,6 +24,12 @@ const fmtDay = (t) => new Date(t).toLocaleDateString(undefined, { weekday: 'shor
 const fmtDuration = (s) => `${Math.floor(s / 60)}m ${String(Math.round(s % 60)).padStart(2, '0')}s`;
 
 const SEARCH_DAYS = 7;
+const VIS_LABEL = { visible: 'Visible', daylight: 'Daylight', unlit: 'In shadow' };
+const VIS_HELP = {
+  visible: 'Sunlit against a dark sky: you can see it with the naked eye',
+  daylight: 'Not visible: the sky is too bright',
+  unlit: "Not visible: the sky is dark but the satellite is in Earth's shadow",
+};
 const RECOMPUTE_AFTER_MS = 30 * 60e3; // simulated time
 
 export function createPassPanel(root, { getTime, getObserver, getPropagate, getMinElevation, onChoose = () => {} }) {
@@ -37,7 +43,9 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
   let sat = null;
   let result = null;
   let computedAt = -Infinity;
-  let chosen = null; // index of the pass shown in the sky plot
+  let chosen = null; // index (into `shown`) of the pass in the sky plot
+  let shown = []; // passes after the "visible only" filter
+  let visibleOnly = false;
   let liveDot = null;
   let skySize = 0;
 
@@ -52,10 +60,17 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
       minElevationDeg: getMinElevation(),
       propagate: getPropagate(),
     });
-    chosen = result.passes.length ? 0 : null;
+    // Label every pass: visible / daylight / in Earth's shadow.
+    for (const p of result.passes) p.vis = passVisibility(sat.el, getObserver(), p, getPropagate(), 5e3);
+    applyFilter();
+  }
+
+  function applyFilter() {
+    shown = visibleOnly ? result.passes.filter((p) => p.vis.type === 'visible') : result.passes;
+    chosen = shown.length ? 0 : null;
     renderList();
     renderSky();
-    onChoose(chosen !== null ? { sat, pass: result.passes[chosen] } : null);
+    onChoose(chosen !== null ? { sat, pass: shown[chosen] } : null);
   }
 
   function renderList() {
@@ -66,9 +81,10 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
     } else if (result.status === 'never-up') {
       statusEl.textContent = `${sat.label} never gets above ${minEl}° from here in the next ${SEARCH_DAYS} days.`;
     } else {
-      statusEl.textContent = `${result.passes.length} passes above ${minEl}° in the next ${SEARCH_DAYS} days.`;
+      const nVisible = result.passes.filter((p) => p.vis.type === 'visible').length;
+      statusEl.textContent = `${result.passes.length} passes above ${minEl}° in the next ${SEARCH_DAYS} days, ${nVisible} visible to the eye.`;
     }
-    result.passes.forEach((p, k) => {
+    shown.forEach((p, k) => {
       const tr = document.createElement('tr');
       tr.tabIndex = 0;
       if (k === chosen) tr.className = 'chosen';
@@ -85,6 +101,19 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
         td.textContent = c;
         tr.append(td);
       }
+      const vis = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = `vis vis-${p.vis.type}`;
+      badge.textContent = VIS_LABEL[p.vis.type];
+      badge.title = VIS_HELP[p.vis.type];
+      vis.append(badge);
+      tr.append(vis);
+      // Rise time as hh:mm plus seconds in a span that phones hide to save space.
+      const riseText = fmtTime(p.rise.t);
+      const secs = document.createElement('span');
+      secs.className = 'secs';
+      secs.textContent = riseText.slice(5);
+      tr.cells[1].replaceChildren(riseText.slice(0, 5), secs, ` ${compass16(p.rise.azDeg)}`);
       if (p.partial) tr.cells[1].textContent = 'in progress';
       const pick = () => {
         chosen = k;
@@ -124,9 +153,11 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
       svg.append(svgEl('text', { x, y: y + 4, 'text-anchor': 'middle', class: 'sky-dir' }, label));
     }
 
-    const p = chosen !== null ? result?.passes[chosen] : null;
+    const p = chosen !== null ? shown[chosen] : null;
     if (!p) {
-      skyCaption.textContent = result?.status === 'always-up' ? 'Always above the horizon: see the live position.' : 'No pass to show.';
+      skyCaption.textContent = result?.status === 'always-up'
+        ? 'Always above the horizon: see the live position.'
+        : visibleOnly && result?.passes.length ? 'No visible passes in the next 7 days.' : 'No pass to show.';
       // For an always-up satellite, show where it sits in the sky.
       if (result?.status === 'always-up') {
         liveDot = svgEl('circle', { r: 6, fill: sat.color, stroke: css('--bg'), 'stroke-width': 2 });
@@ -136,12 +167,27 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
       updateLive();
       return;
     }
-    const track = passTrack(sat.el, getObserver(), p, 10e3, getPropagate());
-    const d = track.map((q, k) => {
-      const [x, y] = polar(q.azDeg, q.elDeg, R, c);
-      return `${k ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join('');
-    svg.append(svgEl('path', { d, fill: 'none', stroke: sat.color, 'stroke-width': 2.5, 'stroke-linecap': 'round' }));
+    // Track: solid where the satellite is sunlit, dashed and faint where it is
+    // in Earth's shadow (and so invisible, even on a dark night).
+    const track = p.vis.track;
+    let run = [];
+    const flush = (lit) => {
+      if (run.length < 2) return;
+      const d = run.map(([x, y], k) => `${k ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+      svg.append(svgEl('path', lit
+        ? { d, fill: 'none', stroke: sat.color, 'stroke-width': 2.5, 'stroke-linecap': 'round' }
+        : { d, fill: 'none', stroke: sat.color, 'stroke-width': 1.5, 'stroke-dasharray': '3 4', opacity: 0.55 }));
+    };
+    track.forEach((q, k) => {
+      const pt = polar(q.azDeg, q.elDeg, R, c);
+      if (k && q.sunlit !== track[k - 1].sunlit) {
+        run.push(pt); // join the two styles at the shadow boundary
+        flush(track[k - 1].sunlit);
+        run = [];
+      }
+      run.push(pt);
+    });
+    flush(track.at(-1).sunlit);
     // Direction arrow near the end of the track
     const a = track.at(-4) ?? track[0], b = track.at(-1);
     const [ax, ay] = polar(a.azDeg, a.elDeg, R, c), [bx, by] = polar(b.azDeg, b.elDeg, R, c);
@@ -158,7 +204,16 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
     liveDot = svgEl('circle', { r: 6, fill: sat.color, stroke: css('--bg'), 'stroke-width': 2, visibility: 'hidden' });
     svg.append(liveDot);
     sky.append(svg);
-    skyCaption.textContent = `${fmtDay(p.rise.t)}: rises ${compass16(p.rise.azDeg)}, highest ${p.max.elDeg.toFixed(0)}° in the ${compass16(p.max.azDeg)}, sets ${compass16(p.set.azDeg)}.`;
+    const path = `rises ${compass16(p.rise.azDeg)}, highest ${p.max.elDeg.toFixed(0)}° in the ${compass16(p.max.azDeg)}, sets ${compass16(p.set.azDeg)}.`;
+    let seeIt = '';
+    if (p.vis.type === 'visible') {
+      const enters = p.vis.to < p.set.t - 10e3 ? ', then it enters Earth\'s shadow' : '';
+      const leaves = p.vis.from > p.rise.t + 10e3 ? ' (after leaving Earth\'s shadow)' : '';
+      seeIt = ` Visible ${fmtTime(p.vis.from).slice(0, 5)}–${fmtTime(p.vis.to).slice(0, 5)}${leaves}${enters}.`;
+    } else {
+      seeIt = ` ${VIS_HELP[p.vis.type]}.`;
+    }
+    skyCaption.textContent = `${fmtDay(p.rise.t)}: ${path}${seeIt} Dashed = in Earth's shadow.`;
     updateLive();
   }
 
@@ -208,6 +263,10 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
       compute();
     },
     refresh() { if (sat) compute(); },
+    setVisibleOnly(on) {
+      visibleOnly = on;
+      if (result) applyFilter();
+    },
     tick: updateLive,
   };
 }
@@ -218,6 +277,7 @@ export function nextPassSummary(sat, observer, now, propagate, minElevationDeg) 
   if (r.status === 'always-up') return { text: 'Always above the horizon', up: true };
   if (r.status === 'never-up') return { text: 'No passes in the next 2 days', up: false };
   const p = r.passes[0];
-  if (p.partial) return { text: `Passing now, until ${fmtTime(p.set.t).slice(0, 5)}`, up: true, until: p.set.t };
-  return { text: `Next pass ${fmtDay(p.rise.t)} ${fmtTime(p.rise.t).slice(0, 5)}, max ${p.max.elDeg.toFixed(0)}°`, up: false, until: p.rise.t };
+  const visible = passVisibility(sat.el, observer, p, propagate, 10e3).type === 'visible' ? ' · visible' : '';
+  if (p.partial) return { text: `Passing now, until ${fmtTime(p.set.t).slice(0, 5)}${visible}`, up: true, until: p.set.t };
+  return { text: `Next pass ${fmtDay(p.rise.t)} ${fmtTime(p.rise.t).slice(0, 5)}, max ${p.max.elDeg.toFixed(0)}°${visible}`, up: false, until: p.rise.t };
 }

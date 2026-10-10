@@ -10,9 +10,11 @@
 // Sped up, you can watch Earth turn underneath orbits that stay put.
 
 import { R_EARTH, TWO_PI } from '../orbit/constants.js';
-import { rotateX, rotateZ, norm } from '../orbit/vec.js';
+import { rotateX, rotateZ, norm, cross, scale } from '../orbit/vec.js';
 import { toKeplerian } from '../orbit/kepler.js';
 import { gmst } from '../orbit/time.js';
+import { sunPosition } from '../orbit/sun.js';
+
 import { landRings } from '../data/land.js';
 
 const ORBIT_SAMPLES = 240;
@@ -113,6 +115,47 @@ export function createOrbitView(canvas, satellites, { getTime, onSelect, propaga
     ctx.fill('evenodd');
   }
 
+  // Night hemisphere. The terminator is the great circle perpendicular to the
+  // Sun direction. Its far half is pushed out to the disc's edge (as for the
+  // continents), which closes it into a shape covering one side of the disc.
+  // If that side is the day side, the night is the rest of the disc instead.
+  function drawNight(t) {
+    const sHat = scale(sunPosition(t), 1 / norm(sunPosition(t)));
+    const helper = Math.abs(sHat[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
+    const u = scale(cross(sHat, helper), 1 / norm(cross(sHat, helper)));
+    const w = cross(sHat, u);
+    const s = Math.min(width, height) / 2 / state.viewRadius;
+    const centre = [width / 2, height / 2];
+    const toScreen = (rx, rz) => [centre[0] + rx * s, centre[1] - rz * s];
+    const pts = [];
+    let farMid = null;
+    for (let k = 0; k < 180; k++) {
+      const th = (k / 180) * TWO_PI;
+      const p = [0, 1, 2].map((j) => R_EARTH * (u[j] * Math.cos(th) + w[j] * Math.sin(th)));
+      const pr = project(p);
+      let { rx, rz } = pr;
+      if (pr.depth > 0) {
+        const f = R_EARTH / Math.hypot(rx, rz);
+        rx *= f;
+        rz *= f;
+        farMid = [rx, rz];
+      }
+      pts.push(toScreen(rx, rz));
+    }
+    const sView = project(sHat.map((x) => x * R_EARTH));
+    // Is the edge region the shape covers on the night side?
+    const shapeIsNight = farMid ? farMid[0] * sView.rx + farMid[1] * sView.rz < 0 : sView.depth > 0;
+    ctx.beginPath();
+    pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    if (!shapeIsNight) {
+      ctx.moveTo(centre[0] + R_EARTH * s, centre[1]);
+      ctx.arc(centre[0], centre[1], R_EARTH * s, 0, TWO_PI);
+    }
+    ctx.fillStyle = css('--night');
+    ctx.fill('evenodd');
+  }
+
   function drawEarth(t) {
     const c = project([0, 0, 0]);
     const r = (Math.min(width, height) / 2) * (R_EARTH / state.viewRadius);
@@ -124,6 +167,7 @@ export function createOrbitView(canvas, satellites, { getTime, onSelect, propaga
     ctx.arc(c.x, c.y, r, 0, TWO_PI);
     ctx.fill();
     drawLand(t);
+    drawNight(t);
 
     // Graticule (Earth-fixed, so it turns with GMST too), front side only.
     const theta = gmst(t);

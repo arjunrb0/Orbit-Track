@@ -1,7 +1,7 @@
 import { CATALOG } from './data/catalog.js';
 import { parseOmm, epochAgeDays } from './data/elements.js';
 import { propagateKepler, toKeplerian } from './orbit/kepler.js';
-import { propagateJ2 } from './orbit/j2.js';
+import { propagateJ2, propagateJ2Drag } from './orbit/j2.js';
 import { createAccuracyChart } from './ui/accuracy-chart.js';
 import { createPassPanel, nextPassSummary } from './ui/pass-panel.js';
 import { norm } from './orbit/vec.js';
@@ -25,10 +25,10 @@ function setSpeed(speed, resetToNow = false) {
 }
 
 // -------------------------------------------------------------- propagator
-// Which of my propagators drives the map, globe and cards. J2 by default:
-// stage 4 showed it's ~30x closer to SGP4 than pure Kepler after one day.
-const PROPAGATORS = { j2: propagateJ2, kepler: propagateKepler };
-let activeModel = 'j2';
+// Which propagator drives the map, globe, cards and passes. J2 + drag by
+// default: it is the closest to SGP4 and to Heavens-Above (docs/RESULTS.md).
+const PROPAGATORS = { drag: propagateJ2Drag, j2: propagateJ2, kepler: propagateKepler };
+let activeModel = 'drag';
 const propagate = (el, t) => PROPAGATORS[activeModel](el, t);
 // Passes count from this elevation. 10 deg by default, like Heavens-Above:
 // the lowest few degrees are usually hidden by trees and buildings.
@@ -240,6 +240,7 @@ async function main() {
     invalidatePasses();
     tick();
   });
+  wireSegmented('[data-visfilter]', (btn) => passPanel.setVisibleOnly(btn.dataset.visfilter === 'visible'));
   wireSegmented('[data-minel]', (btn) => {
     minElevationDeg = Number(btn.dataset.minel);
     invalidatePasses();

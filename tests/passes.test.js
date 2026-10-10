@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { parseOmm } from '../src/data/elements.js';
 import { DEG, R_EARTH } from '../src/orbit/constants.js';
 import { propagateKepler } from '../src/orbit/kepler.js';
-import { propagateJ2 } from '../src/orbit/j2.js';
+import { propagateJ2, propagateJ2Drag } from '../src/orbit/j2.js';
 import { subSatellitePoint } from '../src/orbit/frames.js';
 import { sgp4Reference } from '../src/analysis/compare.js';
 import { findPasses, lookAt } from '../src/passes/passes.js';
@@ -62,6 +62,14 @@ test('Heavens-Above: my J2 propagator gets every pass within a minute over 10 da
   // Within the first 3 days (fresh data), much tighter.
   for (const r of rows.filter((x) => x.day < '2026-10-13')) {
     for (const d of r.dt) assert.ok(Math.abs(d) <= 10, `${r.day}: ${d} s`);
+  }
+});
+
+test('Heavens-Above: with the n-dot drag term, every pass is within 5 s for all 10 days', () => {
+  for (const r of compareWithHeavensAbove(propagateJ2Drag)) {
+    assert.ok(!r.missing, `missing pass on ${r.day}`);
+    for (const d of r.dt) assert.ok(Math.abs(d) <= 5, `${r.day}: ${d} s`);
+    assert.ok(Math.abs(r.dAlt) <= 1, `${r.day}: max altitude off by ${r.dAlt.toFixed(2)} deg`);
   }
 });
 

@@ -33,6 +33,7 @@ import { MU_EARTH, R_EARTH, TWO_PI, DEG, SECONDS_PER_DAY } from './constants.js'
 import { semiMajorAxisFromMeanMotion, solveKepler, trueAnomalyFromEccentric, stateFromElements } from './kepler.js';
 
 export const J2 = 0.001082616; // WGS-72 value, as used by SGP4
+export const DEEP_SPACE_PERIOD_S = 225 * 60; // SGP4 treats longer periods as "deep space"
 
 /**
  * Convert published (Kozai) mean motion to Brouwer mean motion, following the
@@ -83,7 +84,7 @@ export function j2Rates(nKozai, e, i, j2 = J2) {
  * Velocity note: v comes from the instantaneous ellipse. It ignores the slow
  * turning of the ellipse itself, an error of order n J2 ~ 1e-6 relative.
  */
-export function propagateJ2(el, timeMs, { j2 = J2 } = {}) {
+export function propagateJ2(el, timeMs, { j2 = J2, drag = false } = {}) {
   const nKozai = (el.meanMotionRevPerDay * TWO_PI) / SECONDS_PER_DAY;
   const e = el.eccentricity;
   const i = el.inclinationDeg * DEG;
@@ -91,8 +92,33 @@ export function propagateJ2(el, timeMs, { j2 = J2 } = {}) {
   const dt = (timeMs - el.epochMs) / 1000;
   const raan = el.raanDeg * DEG + rates.raanDot * dt;
   const argp = el.argPerigeeDeg * DEG + rates.argpDot * dt;
-  const M = el.meanAnomalyDeg * DEG + rates.mDot * dt;
+  let M = el.meanAnomalyDeg * DEG + rates.mDot * dt;
+  let a = rates.a;
+  // Only near-Earth orbits (period < 225 min, SGP4's own dividing line) have
+  // air to drag on. At geosynchronous height n-dot is just a fitted number
+  // soaking up Sun/Moon effects and station-keeping, so it isn't applied.
+  if (drag && TWO_PI / nKozai < DEEP_SPACE_PERIOD_S) {
+    // Drag takes energy away, so the orbit sinks and (Kepler's third law) the
+    // satellite speeds up: the mean motion grows at a steady n-dot. The element
+    // set publishes n-dot/2 in rev/day^2. Integrating n(t) = n0 + n-dot t once
+    // more gives the extra mean anomaly: (n-dot/2) t^2 revolutions.
+    const days = dt / SECONDS_PER_DAY;
+    const nDotHalf = el.meanMotionDotHalf; // rev/day^2
+    M += TWO_PI * nDotHalf * days * days;
+    // ...and the orbit shrinks to match the faster mean motion.
+    const nNow = rates.n + (2 * nDotHalf * days * TWO_PI) / SECONDS_PER_DAY; // rad/s
+    a = semiMajorAxisFromMeanMotion(nNow);
+  }
   const E = solveKepler(M, e);
   const nu = trueAnomalyFromEccentric(E, e);
-  return stateFromElements(rates.a, e, i, raan, argp, nu, MU_EARTH);
+  return stateFromElements(a, e, i, raan, argp, nu, MU_EARTH);
+}
+
+/**
+ * Two-body + J2 secular drift + a simple drag model from the element set's own
+ * n-dot. (SGP4 models drag differently, through B*, so this is an independent
+ * estimate rather than a copy of SGP4's drag.)
+ */
+export function propagateJ2Drag(el, timeMs) {
+  return propagateJ2(el, timeMs, { drag: true });
 }

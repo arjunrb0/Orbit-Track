@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { json2satrec, twoline2satrec } from '../src/analysis/sgp4-lib.js';
 import { parseOmm, parseTle } from '../src/data/elements.js';
 import { DEG, TWO_PI, SECONDS_PER_DAY } from '../src/orbit/constants.js';
-import { unKozai, j2Rates, propagateJ2 } from '../src/orbit/j2.js';
+import { unKozai, j2Rates, propagateJ2, propagateJ2Drag } from '../src/orbit/j2.js';
 import { propagateKepler, toKeplerian } from '../src/orbit/kepler.js';
 import { errorSeries, summarise } from '../src/analysis/compare.js';
 import { norm, sub } from '../src/orbit/vec.js';
@@ -93,4 +93,24 @@ test('ISS vs SGP4 after a week: remaining error is drag, along-track, as predict
   const predicted = iss.meanMotionDotHalf * days * days * TWO_PI * toKeplerian(iss).a;
   near(Math.abs(end.along), predicted, 0.25 * predicted, 'along-track km vs n-dot prediction');
   assert.ok(w1.j2 < w1.kepler / 10, 'J2 still at least 10x better than Kepler at 1 week');
+});
+
+// ------------------------------------------------------------ drag (n-dot)
+
+test('drag term: with n-dot = 0 it is exactly the J2 model', () => {
+  const noDrag = { ...iss, meanMotionDotHalf: 0 };
+  const t = iss.epochMs + 5 * DAY;
+  near(norm(sub(propagateJ2Drag(noDrag, t).r, propagateJ2(noDrag, t).r)), 0, 1e-9);
+});
+
+test('drag term: not applied to deep-space (geosynchronous) orbits, which have no air', () => {
+  const insat = parseOmm(data.satellites.find((s) => s.NORAD_CAT_ID === 41752));
+  const t = insat.epochMs + 7 * DAY;
+  near(norm(sub(propagateJ2Drag(insat, t).r, propagateJ2(insat, t).r)), 0, 1e-9);
+});
+
+test('ISS vs SGP4 after a week: the n-dot drag term cuts the error about tenfold', () => {
+  const [week] = summarise(series, [7 * DAY]);
+  assert.ok(week.drag < 25, `J2 + drag 1-week error ${week.drag.toFixed(1)} km`);
+  assert.ok(week.drag < week.j2 / 5, `J2 ${week.j2.toFixed(1)} km vs J2 + drag ${week.drag.toFixed(1)} km`);
 });

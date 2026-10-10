@@ -15,13 +15,14 @@
 
 import { json2satrec, sgp4 } from './sgp4-lib.js';
 import { propagateKepler } from '../orbit/kepler.js';
-import { propagateJ2 } from '../orbit/j2.js';
+import { propagateJ2, propagateJ2Drag } from '../orbit/j2.js';
 import { sub, dot, cross, norm, scale } from '../orbit/vec.js';
 import { JD_UNIX_EPOCH } from '../orbit/time.js';
 
 export const MODELS = {
   kepler: { label: 'Two-body (Kepler)', propagate: propagateKepler },
   j2: { label: 'Two-body + J2 secular', propagate: propagateJ2 },
+  drag: { label: 'Two-body + J2 + drag (n-dot)', propagate: propagateJ2Drag },
 };
 
 /** Build an SGP4 propagator for an OMM record: (timeMs) -> { r, v } in TEME, or null on failure. */

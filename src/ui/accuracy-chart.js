@@ -16,7 +16,8 @@ const HORIZONS = [3600e3, DAY, 7 * DAY];
 const HORIZON_LABELS = ['After 1 hour', 'After 1 day', 'After 1 week'];
 // Validated (dataviz palette checker) on the dark panel surface: lightness band,
 // colour-blind separation and contrast all pass.
-export const MODEL_COLORS = { kepler: '#dd6a35', j2: '#2f94d0' };
+export const MODEL_COLORS = { kepler: '#dd6a35', j2: '#2f94d0', drag: '#3e9e5e' };
+const SHORT = { kepler: 'Kepler', j2: '+ J2', drag: '+ J2 + drag' };
 
 const NS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs = {}, text) => {
@@ -54,12 +55,12 @@ export function createAccuracyChart(root) {
     summary.forEach((row, k) => {
       const tile = document.createElement('div');
       tile.className = 'acc-tile';
-      const factor = row.kepler / row.j2;
+      const best = Math.min(row.j2, row.drag);
+      const factor = row.kepler / best;
       tile.innerHTML = `
         <div class="acc-tile-label">${HORIZON_LABELS[k]}</div>
-        <div class="acc-tile-row"><span class="swatch" style="background:${MODEL_COLORS.kepler}"></span>Kepler<b>${fmtKm(row.kepler)}</b></div>
-        <div class="acc-tile-row"><span class="swatch" style="background:${MODEL_COLORS.j2}"></span>+ J2<b>${fmtKm(row.j2)}</b></div>
-        <div class="acc-tile-note">${factor >= 1.5 ? `J2 is ${factor >= 10 ? Math.round(factor) : factor.toFixed(1)}× closer` : factor <= 1 / 1.5 ? 'J2 is worse here' : 'about the same'}</div>`;
+        ${Object.keys(MODELS).map((key) => `<div class="acc-tile-row"><span class="swatch" style="background:${MODEL_COLORS[key]}"></span>${SHORT[key]}<b>${fmtKm(row[key])}</b></div>`).join('')}
+        <div class="acc-tile-note">${factor >= 1.5 ? `Best model ${factor >= 10 ? Math.round(factor) : factor.toFixed(1)}× closer than Kepler` : factor <= 1 / 1.5 ? 'Corrections make it worse here' : 'All about the same'}</div>`;
       tiles.append(tile);
     });
   }
@@ -103,7 +104,7 @@ export function createAccuracyChart(root) {
       const ly = Math.max(y(v), lastY + 30);
       lastY = ly;
       svg.append(svgEl('circle', { cx: x(maxT), cy: y(v), r: 4, fill: MODEL_COLORS[key], stroke: css('--panel'), 'stroke-width': 2 }));
-      svg.append(svgEl('text', { x: x(maxT) + 10, y: ly - 2, class: 'acc-end-label' }, key === 'kepler' ? 'Kepler' : 'Kepler + J2'));
+      svg.append(svgEl('text', { x: x(maxT) + 10, y: ly - 2, class: 'acc-end-label' }, SHORT[key]));
       svg.append(svgEl('text', { x: x(maxT) + 10, y: ly + 12, class: 'acc-end-value' }, fmtKm(v)));
     }
     // Hover layer: crosshair + tooltip
@@ -130,7 +131,7 @@ export function createAccuracyChart(root) {
       const when = (hrs) => (hrs < 48 ? `${hrs.toFixed(0)} h` : `${(hrs / 24).toFixed(1)} days`);
       tooltip.innerHTML = `<div class="acc-tt-time">${row.t === 0 ? 'At epoch' : `Worst error, ${when(Math.max(0, hours - 2))}–${when(hours)} after epoch`}</div>
         ${Object.keys(MODELS).map((key) => `<div class="acc-tt-row"><span class="swatch" style="background:${MODEL_COLORS[key]}"></span>${MODELS[key].label}<b>${fmtKm(row[key].total)}</b></div>`).join('')}
-        <div class="acc-tt-sub">J2 error: along-track ${fmtKm(Math.abs(row.j2.along))}, cross-track ${fmtKm(Math.abs(row.j2.cross))}</div>`;
+        <div class="acc-tt-sub">J2 + drag error: along-track ${fmtKm(Math.abs(row.drag.along))}, cross-track ${fmtKm(Math.abs(row.drag.cross))}</div>`;
       tooltip.hidden = false;
       const boxRect = chartBox.getBoundingClientRect();
       const left = Math.min(cx + 14, boxRect.width - tooltip.offsetWidth - 4);
