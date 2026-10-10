@@ -1,0 +1,62 @@
+{
+ "source": "Heavens-Above, ISS - Visible Passes, https://www.heavens-above.com/PassSummary.aspx?satid=25544&lat=12.9716&lng=77.5946&loc=Bengaluru&alt=920&tz=UCT",
+ "retrieved": "2026-10-10T13:00Z",
+ "observer": {
+  "name": "Bengaluru",
+  "latDeg": 12.9716,
+  "lonDeg": 77.5946,
+  "heightM": 920
+ },
+ "elementEpoch": "9 October 2026, same element set as tests/fixtures/iss-omm.json",
+ "notes": "Times UTC. Only the visible part of each pass (sunlit, dark sky, above 10 deg). visibleStart later than the 10-deg rise means the ISS leaves Earth's shadow then. 'magnitude' is Heavens-Above's predicted brightness (lower = brighter); the 'highestVisible' columns are the highest point of the visible part.",
+ "passes": [
+  {
+   "magnitude": -2.3,
+   "visibleStart": "2026-10-10T23:35:32Z",
+   "visibleStartAltDeg": 10,
+   "visibleStartDir": "SSW",
+   "highestVisible": "2026-10-10T23:38:41Z",
+   "highestVisibleAltDeg": 38,
+   "highestVisibleDir": "SE",
+   "visibleEnd": "2026-10-10T23:41:51Z",
+   "visibleEndAltDeg": 10,
+   "visibleEndDir": "NE"
+  },
+  {
+   "magnitude": -1.1,
+   "visibleStart": "2026-10-11T22:51:07Z",
+   "visibleStartAltDeg": 17,
+   "visibleStartDir": "SE",
+   "highestVisible": "2026-10-11T22:51:30Z",
+   "highestVisibleAltDeg": 18,
+   "highestVisibleDir": "SE",
+   "visibleEnd": "2026-10-11T22:53:52Z",
+   "visibleEndAltDeg": 10,
+   "visibleEndDir": "E"
+  },
+  {
+   "magnitude": -3.1,
+   "visibleStart": "2026-10-12T23:40:24Z",
+   "visibleStartAltDeg": 32,
+   "visibleStartDir": "WNW",
+   "highestVisible": "2026-10-12T23:40:51Z",
+   "highestVisibleAltDeg": 33,
+   "highestVisibleDir": "NW",
+   "visibleEnd": "2026-10-12T23:43:57Z",
+   "visibleEndAltDeg": 10,
+   "visibleEndDir": "NNE"
+  },
+  {
+   "magnitude": -1.0,
+   "visibleStart": "2026-10-13T22:56:21Z",
+   "visibleStartAltDeg": 14,
+   "visibleStartDir": "NE",
+   "highestVisible": "2026-10-13T22:56:21Z",
+   "highestVisibleAltDeg": 14,
+   "highestVisibleDir": "NE",
+   "visibleEnd": "2026-10-13T22:56:57Z",
+   "visibleEndAltDeg": 10,
+   "visibleEndDir": "NE"
+  }
+ ]
+}

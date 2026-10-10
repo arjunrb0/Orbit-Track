@@ -18,6 +18,7 @@ import { propagateKepler } from '../orbit/kepler.js';
 import { propagateJ2, propagateJ2Drag } from '../orbit/j2.js';
 import { sub, dot, cross, norm, scale } from '../orbit/vec.js';
 import { JD_UNIX_EPOCH } from '../orbit/time.js';
+import { temeToJ2000 } from '../orbit/precession.js';
 
 export const MODELS = {
   kepler: { label: 'Two-body (Kepler)', propagate: propagateKepler },
@@ -71,15 +72,42 @@ export function errorSeries(el, omm, durationMs, stepMs, startMs = el.epochMs) {
 }
 
 /**
+ * Error time series against NASA's ISS trajectory (EME2000/J2000 states),
+ * for this project's models and for SGP4 itself. Each model's TEME output is
+ * converted to J2000 first (precession and nutation since 2000).
+ *
+ * @param {Array} states  [[isoTime, x, y, z, vx, vy, vz], ...] in km, km/s
+ * @returns {Array<{ t, kepler, j2, drag, sgp4 }>}  t in ms since the element epoch
+ */
+export function errorSeriesVsTruth(el, omm, states, durationMs = 7 * 86400e3) {
+  const sgp4 = sgp4Reference(omm);
+  const models = { ...Object.fromEntries(Object.entries(MODELS).map(([k, m]) => [k, m.propagate])), sgp4: (_, t) => sgp4(t) };
+  const out = [];
+  for (const [time, ...state] of states) {
+    const t = Date.parse(time);
+    if (t < el.epochMs || t > el.epochMs + durationMs) continue;
+    const truth = { r: state.slice(0, 3), v: state.slice(3, 6) };
+    const row = { t: t - el.epochMs };
+    for (const [key, propagate] of Object.entries(models)) {
+      const s = propagate(el, t);
+      if (!s) return out;
+      row[key] = ricError({ r: temeToJ2000(s.r, t), v: temeToJ2000(s.v, t) }, truth);
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+/**
  * Summary numbers for a series: the worst error seen within each horizon,
  * which is fairer than the error at one instant (errors oscillate within an orbit).
  */
-export function summarise(series, horizonsMs) {
+export function summarise(series, horizonsMs, keys = Object.keys(MODELS)) {
   return horizonsMs.map((h) => {
     const inWindow = series.filter((row) => row.t <= h);
     const result = { horizonMs: h };
-    for (const key of Object.keys(MODELS)) {
-      result[key] = Math.max(...inWindow.map((row) => row[key].total));
+    for (const key of keys) {
+      result[key] = inWindow.length ? Math.max(...inWindow.map((row) => row[key].total)) : NaN;
     }
     return result;
   });

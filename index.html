@@ -130,19 +130,25 @@
     <section class="panel card-panel accuracy" id="accuracy">
       <div class="acc-head">
         <div>
-          <h2>Accuracy vs SGP4 · <span class="acc-name"></span></h2>
-          <p class="muted">How far this project's propagators drift from SGP4 (satellite.js), starting from the element-set epoch.
-            SGP4 is the reference these elements were made for, not ground truth.</p>
+          <h2>Accuracy vs <span class="acc-ref">SGP4</span> · <span class="acc-name"></span></h2>
+          <p class="muted acc-desc"></p>
         </div>
-        <div class="acc-legend" aria-hidden="true">
-          <span><span class="swatch" style="background:#dd6a35"></span>Kepler</span>
-          <span><span class="swatch" style="background:#2f94d0"></span>+ J2</span>
-          <span><span class="swatch" style="background:#3e9e5e"></span>+ J2 + drag</span>
+        <div class="acc-side">
+          <div class="segmented" role="group" aria-label="Compare with" id="acc-ref-toggle" hidden>
+            <button data-accref="sgp4" class="active">vs SGP4</button>
+            <button data-accref="nasa" title="NASA's own high-precision ISS trajectory">vs NASA trajectory</button>
+          </div>
+          <div class="acc-legend" aria-hidden="true">
+            <span><span class="swatch" style="background:#dd6a35"></span>Kepler</span>
+            <span><span class="swatch" style="background:#2f94d0"></span>+ J2</span>
+            <span><span class="swatch" style="background:#3e9e5e"></span>+ J2 + drag</span>
+            <span class="legend-sgp4" hidden><span class="swatch swatch-ref"></span>SGP4</span>
+          </div>
         </div>
       </div>
       <div class="acc-tiles"></div>
       <div class="acc-chart"><div class="acc-tooltip" hidden></div></div>
-      <p class="muted acc-foot">Line: worst error in each 2-hour window. Tiles: worst error since epoch. Sampled every 5 minutes. Full table for every satellite in docs/RESULTS.md.</p>
+      <p class="muted acc-foot">Line: worst error in each 2-hour window. Tiles: worst error since epoch. Full tables for every satellite in docs/RESULTS.md.</p>
     </section>
 
     <section class="panel">
@@ -172,7 +178,8 @@
     <footer class="foot muted">
       Positions from this project's own propagator: a two-body orbit plus the secular drift caused by Earth's equatorial
       bulge (J2) and a simple drag term from the element set's n-dot (switchable in the header). No Sun or Moon,
-      so positions drift from reality as the data ages (see the accuracy panel). Earth rotation uses GMST with UTC in place of
+      so positions drift from reality as the data ages (see the accuracy panel). Elevations include atmospheric
+      refraction. ISS brightness assumes a standard magnitude of −1.8 and is good to about ±0.7 magnitudes. Earth rotation uses GMST with UTC in place of
       UT1 (up to ~0.4 km error). Data: CelesTrak. Coastlines: Natural Earth.
     </footer>
 

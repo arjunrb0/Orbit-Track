@@ -7,6 +7,7 @@ import { createPassPanel, nextPassSummary } from './ui/pass-panel.js';
 import { norm } from './orbit/vec.js';
 import { R_EARTH, TWO_PI, DEG } from './orbit/constants.js';
 import { temeToEcef, lookAngles } from './orbit/frames.js';
+import { apparentElevation } from './passes/sky.js';
 import { createOrbitView } from './ui/orbit-view.js';
 import { createMapView } from './ui/map-view.js';
 
@@ -73,6 +74,16 @@ async function loadElements() {
   if (!res.ok) throw new Error(`Could not load orbital data (${res.status})`);
   const data = await res.json();
   return { fetchedAt: data.fetchedAt, elements: data.satellites.map(parseOmm), omms: data.satellites };
+}
+
+/** NASA's ISS trajectory, if the daily fetch saved one. Optional. */
+async function loadIssEphemeris() {
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}data/iss-oem.json`);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
 }
 
 const el = (tag, className, text) => {
@@ -164,6 +175,19 @@ async function main() {
   buildTable(satellites);
 
   const accuracy = createAccuracyChart(document.getElementById('accuracy'));
+  const issEphemeris = await loadIssEphemeris();
+  let accReference = 'sgp4';
+  const ACC_DESC = {
+    SGP4: 'How far this project\'s propagators drift from SGP4 (satellite.js), starting from the element-set epoch. SGP4 is the reference these elements were made for, not ground truth.',
+    "NASA's ISS trajectory": `Against NASA's own high-precision ISS trajectory (created ${issEphemeris?.creationDate?.slice(0, 10) ?? '?'}, converted from J2000), the closest thing to the ISS's true position that is public. SGP4's own error is the dashed line.`,
+  };
+  const showAccuracy = (sat) => {
+    const isIss = sat.el.noradId === 25544 && issEphemeris;
+    document.getElementById('acc-ref-toggle').hidden = !isIss;
+    const reference = accuracy.show(sat, isIss && accReference === 'nasa' ? issEphemeris.states : null);
+    document.querySelector('.acc-desc').textContent = ACC_DESC[reference];
+    document.querySelector('.legend-sgp4').hidden = reference === 'SGP4';
+  };
   const passPanel = createPassPanel(document.getElementById('passes'), {
     getTime: simTime,
     getObserver: observerRad,
@@ -178,11 +202,13 @@ async function main() {
     passPanel.refresh();
   };
   onObserverChange = invalidatePasses;
+  let selectedSat = null;
   const select = (id) => {
     view.select(id);
     map.select(id);
     const sat = satellites.find((s) => s.el.noradId === id);
-    accuracy.show(sat);
+    selectedSat = sat;
+    showAccuracy(sat);
     passPanel.setSatellite(sat);
     for (const li of list.children) {
       li.classList.toggle('selected', Number(li.dataset.id) === id);
@@ -239,6 +265,10 @@ async function main() {
     view.refresh();
     invalidatePasses();
     tick();
+  });
+  wireSegmented('[data-accref]', (btn) => {
+    accReference = btn.dataset.accref;
+    if (selectedSat) showAccuracy(selectedSat);
   });
   wireSegmented('[data-visfilter]', (btn) => passPanel.setVisibleOnly(btn.dataset.visfilter === 'visible'));
   wireSegmented('[data-minel]', (btn) => {
@@ -299,7 +329,7 @@ async function main() {
       sat.live.speed.textContent = `${norm(v).toFixed(2)} km/s`;
       sat.live.period.textContent = formatPeriod(sat.periodMin);
       const look = lookAngles(temeToEcef(r, t), observerRad());
-      const az = look.azimuth / DEG, elev = look.elevation / DEG;
+      const az = look.azimuth / DEG, elev = apparentElevation(look.elevation) / DEG;
       const up = elev > 0;
       sat.live.look.innerHTML = '';
       sat.live.look.append(

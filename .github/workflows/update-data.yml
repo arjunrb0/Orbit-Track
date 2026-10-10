@@ -27,8 +27,10 @@ jobs:
       - name: Commit if the element sets changed
         run: |
           # omm.json always changes (its fetchedAt timestamp), so judge by tle.txt,
-          # which only changes when CelesTrak publishes new elements.
-          if git diff --quiet -- public/data/tle.txt; then
+          # which only changes when CelesTrak publishes new elements, and by
+          # NASA's ISS ephemeris, which is updated a few times a week.
+          git add -N public/data/iss-oem.json 2>/dev/null || true
+          if git diff --quiet -- public/data/tle.txt public/data/iss-oem.json; then
             echo "No new element sets."
             exit 0
           fi

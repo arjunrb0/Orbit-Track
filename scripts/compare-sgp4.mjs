@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { CATALOG } from '../src/data/catalog.js';
 import { parseOmm } from '../src/data/elements.js';
-import { errorSeries, summarise, sgp4Reference } from '../src/analysis/compare.js';
+import { errorSeries, errorSeriesVsTruth, summarise, sgp4Reference } from '../src/analysis/compare.js';
 import { findPasses, passVisibility } from '../src/passes/passes.js';
 import { propagateKepler, toKeplerian } from '../src/orbit/kepler.js';
 import { propagateJ2, propagateJ2Drag, j2Rates, J2, DEEP_SPACE_PERIOD_S } from '../src/orbit/j2.js';
@@ -93,6 +93,27 @@ const label = (list, h) => passVisibility(iss, obs, list.find((x) => Math.abs(x.
 const match0 = ha.passes.filter((h) => label(passes0, h) === h.type).length;
 const match10 = ha.passes.filter((h) => label(passes10, h) === h.type).length;
 const nVisible = ha.passes.filter((h) => h.type === 'visible').length;
+
+// ------------------------------- against NASA's ISS trajectory (frozen fixture)
+const oem = read('../tests/fixtures/iss-oem-nasa.json');
+const truthSeries = errorSeriesVsTruth(iss, issOmm, oem.states);
+const truthKeys = ['sgp4', 'kepler', 'j2', 'drag'];
+const truthLabels = { sgp4: 'SGP4 (satellite.js)', kepler: 'Kepler', j2: 'Kepler + J2', drag: 'Kepler + J2 + drag' };
+const truthSummary = summarise(truthSeries, [6 * HOUR, DAY, 3 * DAY, 7 * DAY], truthKeys);
+const lastTruth = truthSeries.at(-1);
+const truthRows = truthKeys.map((k) => `| ${truthLabels[k]} | ${truthSummary.map((x) => fmt(x[k])).join(' | ')} | ${lastTruth[k].along >= 0 ? '+' : '−'}${fmt(Math.abs(lastTruth[k].along))} |`);
+const firstTruth = truthSeries[0];
+const ratios = truthSummary.flatMap((x) => [x.j2 / x.sgp4, x.drag / x.sgp4]);
+
+// ------------------------------ visible passes: shadow timing and brightness
+const haVis = read('../tests/fixtures/heavens-above-iss-visible.json');
+const ISS_STD_MAG = CATALOG.find((c) => c.noradId === 25544).standardMagnitude;
+const visRows = haVis.passes.map((h) => {
+  const p = passes10.find((x) => Math.abs(x.max.t - Date.parse(h.highestVisible)) < 600e3);
+  const v = passVisibility(iss, obs, p, propagateJ2Drag, 1e3, { standardMagnitude: ISS_STD_MAG });
+  const d = (a, b) => `${((a - Date.parse(b)) / 1000).toFixed(0)} s`;
+  return `| ${h.visibleStart.slice(5, 10)} ${h.visibleStart.slice(11, 19)} | ${h.visibleStartAltDeg > 10 ? 'leaves shadow' : 'rises sunlit'} | ${d(v.from, h.visibleStart)} | ${d(v.to, h.visibleEnd)} | ${v.magnitude.toFixed(1)} | ${h.magnitude.toFixed(1)} | ${(v.magnitude - h.magnitude >= 0 ? '+' : '')}${(v.magnitude - h.magnitude).toFixed(1)} |`;
+});
 
 // ------------------------------------------- forces at low and high orbit
 const rIss = toKeplerian(iss).a;
@@ -240,6 +261,37 @@ ${passRows.join('\n')}
   errors that look large in kilometres.
 - **Pure Kepler misses most passes** (they happen at a different time, or not at all, in its model).
 
+## Against NASA's actual ISS trajectory
+
+SGP4 is only a yardstick. A better one, for the ISS, is NASA's own trajectory: the ephemeris NASA
+publishes for the station ([ISS OEM](https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.txt),
+created ${oem.creationDate.slice(0, 10)} from NASA's tracking with a detailed drag model). It is in the J2000 (EME2000) frame, so
+every model's output is first converted from TEME to J2000: precession since 2000 (~0.37°, which would otherwise
+be a ~44 km error) and nutation. That conversion reproduces Vallado et al. (2006) to under 1 m.
+
+Same ISS element set as above (epoch 9 October), worst error within each window (km), and the along-track
+error at day 7 (+ = the model runs ahead of the real ISS):
+
+| Model | ≤ 6 hours | ≤ 1 day | ≤ 3 days | ≤ 7 days | Along-track, day 7 |
+|---|---|---|---|---|---|
+${truthRows.join('\n')}
+
+- **The frames check out on real data.** At the start, SGP4 and NASA agree to ${fmt(Math.abs(firstTruth.sgp4.radial) * 1000)} m radially and
+  ${fmt(Math.abs(firstTruth.sgp4.cross) * 1000)} m cross-track. A frame mistake would show up exactly there. SGP4 starts
+  ${fmt(firstTruth.sgp4.along)} km ahead along-track, a normal size of error for a fitted element set.
+- **SGP4 itself is ${fmt(truthSummary[3].sgp4)} km off after a week.** It runs steadily ahead: the element set implies more drag than
+  NASA's trajectory does.
+- **Against the real trajectory, the drag term is no longer a clear win.** Against SGP4 it cut the ISS's 1-week error
+  tenfold, but that was largely agreeing with SGP4's own drag. Against NASA, after 7 days J2 alone is ${fmt(Math.abs(lastTruth.j2.along))} km
+  *behind* the real ISS and J2 + drag is ${fmt(Math.abs(lastTruth.drag.along))} km *ahead*. The truth lies between: the ṅ in the element set
+  (like SGP4's drag) overestimates this week's drag. Real drag depends on solar activity, which a constant ṅ can't capture.
+- **Both J2 models land between ${(Math.min(...ratios)).toFixed(1)}× and ${(Math.max(...ratios)).toFixed(1)}× SGP4's own error** across these windows, and at 3 days
+  J2 alone (${fmt(truthSummary[2].j2)} km) is ${truthSummary[2].j2 < truthSummary[2].sgp4 ? 'slightly better than' : 'close to'} SGP4 (${fmt(truthSummary[2].sgp4)} km). For a model built from a handful
+  of equations, that is the headline result: over days, the simple physics does nearly as well as the standard model
+  *against reality*. SGP4 is clearly better in the first hours, thanks to the short-period terms these models leave out.
+- **Caveat:** NASA's file is itself a prediction made on ${oem.creationDate.slice(0, 10)}, not raw tracking, so by the end of this window it
+  may be a few km from where the ISS really was.
+
 ## Visible passes vs Heavens-Above
 
 A pass is **visible** when the satellite is sunlit while the observer's sky is dark (Sun more than 6°
@@ -253,13 +305,29 @@ satellite is in Earth's shadow. Heavens-Above labels each pass the same way (${n
 - The shadow model (Earth as a sphere, Sun's centre hidden) agrees with satellite.js's shadow function
   at every sampled position outside the few seconds of penumbra.
 
+Heavens-Above's "visible passes" list gives the exact visible window and a predicted brightness. With J2 + drag
+and an assumed ISS standard magnitude of ${ISS_STD_MAG} (brightness at 1000 km, half lit; not fitted to Heavens-Above):
+
+| Visible from (UTC) | Starts because it… | Start difference | End difference | Magnitude (here) | Magnitude (Heavens-Above) | Difference |
+|---|---|---|---|---|---|---|
+${visRows.join('\n')}
+
+- **Shadow entry and exit times match to within 2 s**, including the passes where the ISS comes out of Earth's
+  shadow part-way across the sky. That checks the Sun position and the shadow geometry together.
+- **Brightness is rougher: within 0.7 magnitudes.** The model treats the ISS as a matt sphere. The differences
+  aren't a constant offset (they range from −0.5 to +0.7), so this isn't just a wrong standard magnitude:
+  the phase law differs, and the real ISS, with its large flat solar arrays, isn't a sphere. Both agree on which
+  pass is brightest.
+- **Refraction** (on in the app, off in all the comparisons above) makes objects near the horizon look ~0.57° higher.
+  ISS passes from the true horizon therefore start ~5–15 s earlier; at 10° the shift is about 1 s.
+
 ## Limitations of this comparison
 
 - Errors are measured from each element set's epoch. In the app, positions are predicted
   from data that is already hours or days old, so real-world error is larger.
 - One snapshot of elements per satellite. A fuller study would repeat this over many element
   sets and dates.
-- No comparison against true positions (e.g. GPS-derived ISS ephemerides) yet.
+- The NASA comparison covers the ISS only, over one week; NASA's file is a prediction, not measured positions.
 - The force table gives magnitudes only (the tidal terms are their maximum values); the effect on an
   orbit also depends on direction and on how the force averages over an orbit.
 `;

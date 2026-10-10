@@ -21,13 +21,13 @@ Worst error within each window, sampled every minute. Each cell is **Kepler / + 
 
 | Satellite | Orbit | At epoch | 1 hour | 1 day | 1 week |
 |---|---|---|---|---|---|
-| ISS (ZARYA) | LEO, 51.6° | 12 / 12 / 12 | 21 / 12 / 12 | 468 / 14 / 13 | 3,213 / 150 / 15 |
-| CARTOSAT-3 | LEO, sun-synchronous | 15 / 16 / 16 | 15 / 17 / 17 | 459 / 19 / 18 | 3,093 / 64 / 27 |
-| EOS-04 | LEO, sun-synchronous | 15 / 16 / 16 | 15 / 17 / 17 | 457 / 18 / 18 | 3,069 / 47 / 27 |
+| ISS (ZARYA) | LEO, 51.6° | 12 / 12 / 12 | 21 / 12 / 12 | 468 / 14 / 13 | 3,213 / 155 / 15 |
+| CARTOSAT-3 | LEO, sun-synchronous | 15 / 16 / 16 | 15 / 17 / 17 | 459 / 18 / 18 | 3,097 / 60 / 27 |
+| EOS-04 | LEO, sun-synchronous | 15 / 16 / 16 | 15 / 17 / 17 | 457 / 18 / 18 | 3,062 / 56 / 27 |
 | EOS-06 (OCEANSAT-3) | LEO, sun-synchronous | 15 / 16 / 16 | 15 / 17 / 17 | 414 / 18 / 18 | 2,875 / 29 / 25 |
-| RISAT-2B | LEO, 37° | 9.0 / 9.8 / 9.8 | 28 / 10.0 / 10.0 | 589 / 12 / 11 | 4,043 / 69 / 21 |
+| RISAT-2B | LEO, 37° | 9.0 / 9.8 / 9.8 | 28 / 10.0 / 10.0 | 589 / 12 / 11 | 4,051 / 81 / 21 |
 | ASTROSAT | LEO, 6° (near-equatorial) | 3.4 / 9.4 / 9.4 | 37 / 10 / 10 | 868 / 14 / 13 | 5,916 / 79 / 47 |
-| INSAT-3DR | GEO | 17 / 17 / 17 | 20 / 21 / 21 | 27 / 29 / 29 | 27 / 50 / 50 |
+| INSAT-3DR | GEO | 27 / 27 / 27 | 27 / 27 / 27 | 27 / 30 / 30 | 27 / 49 / 49 |
 | IRNSS-1I (NavIC) | Inclined geosynchronous, 29° | 28 / 28 / 28 | 28 / 28 / 28 | 30 / 33 / 33 | 60 / 38 / 38 |
 
 ## Where the error is after 1 day (km)
@@ -37,12 +37,12 @@ Split into radial / along-track / cross-track, relative to the SGP4 position.
 | Satellite | Kepler (R / I / C) | Kepler + J2 (R / I / C) |
 |---|---|---|
 | ISS (ZARYA) | 17 / 88 / 459 | 0.1 / 14 / 0.3 |
-| CARTOSAT-3 | 7.8 / 439 / 40 | 3.3 / 3.2 / 0.7 |
-| EOS-04 | 11 / 441 / 81 | 0.3 / 8.3 / 0.7 |
+| CARTOSAT-3 | 7.8 / 439 / 40 | 3.3 / 3.3 / 0.7 |
+| EOS-04 | 11 / 441 / 81 | 0.3 / 8.1 / 0.7 |
 | EOS-06 (OCEANSAT-3) | 12 / 381 / 119 | 4.0 / 15 / 0.2 |
-| RISAT-2B | 23 / 400 / 429 | 4.7 / 6.5 / 0.8 |
+| RISAT-2B | 23 / 400 / 429 | 4.7 / 6.2 / 0.8 |
 | ASTROSAT | 51 / 865 / 48 | 8.7 / 7.7 / 0.8 |
-| INSAT-3DR | 0.6 / 10 / 9.7 | 1.7 / 20 / 9.7 |
+| INSAT-3DR | 0.8 / 10 / 22 | 1.8 / 20 / 22 |
 | IRNSS-1I (NavIC) | 0.6 / 25 / 10 | 1.2 / 31 / 5.9 |
 
 ## What the numbers show
@@ -52,11 +52,11 @@ Split into radial / along-track / cross-track, relative to the SGP4 position.
   drifting (the ISS's plane turns ~5°/day); the along-track part comes from the orbital period and
   perigee drift that J2 causes.
 - **Adding J2's secular drift closes most of that gap for low orbits**, down to
-  12–19 km after one day. The J2 rates agree with SGP4's own internal
+  12–18 km after one day. The J2 rates agree with SGP4's own internal
   rates to within 0.1–0.7%.
 - **Adding the drag term fixes most of the rest over a week.** For the ISS the 1-week error drops from
-  150 km to 15 km. Without it, the error was almost entirely along-track and
-  grew like t², just as the element set's ṅ predicts (≈136 km after 7 days). Across the
+  155 km to 15 km. Without it, the error was almost entirely along-track and
+  grew like t², just as the element set's ṅ predicts (≈140 km after 7 days). Across the
   low-orbit satellites the 1-week error with drag is 15–47 km.
 - **The error at epoch (3.4–28 km) isn't fixed by either correction.**
   Published elements are *mean* elements: averages with SGP4's short-period wobbles (a few km within
@@ -74,16 +74,16 @@ The eight satellites span two very different regimes:
 | Satellite | Mean altitude | Period | Node drift from J2 | Error after 1 day: Kepler / J2 + drag | Error after 1 week: Kepler / J2 + drag |
 |---|---|---|---|---|---|
 | ISS (ZARYA) | 420 km | 93.0 min | -4.95°/day | 468 / 13 km | 3,213 / 15 km |
-| CARTOSAT-3 | 508 km | 94.8 min | 0.99°/day | 459 / 18 km | 3,093 / 27 km |
-| EOS-04 | 528 km | 95.2 min | 0.99°/day | 457 / 18 km | 3,069 / 27 km |
+| CARTOSAT-3 | 508 km | 94.8 min | 0.99°/day | 459 / 18 km | 3,097 / 27 km |
+| EOS-04 | 528 km | 95.2 min | 0.99°/day | 457 / 18 km | 3,062 / 27 km |
 | EOS-06 (OCEANSAT-3) | 736 km | 99.5 min | 0.99°/day | 414 / 18 km | 2,875 / 25 km |
-| RISAT-2B | 564 km | 95.9 min | -5.91°/day | 589 / 11 km | 4,043 / 21 km |
+| RISAT-2B | 564 km | 95.9 min | -5.91°/day | 589 / 11 km | 4,051 / 21 km |
 | ASTROSAT | 621 km | 97.1 min | -7.14°/day | 868 / 13 km | 5,916 / 47 km |
-| INSAT-3DR | 35,787 km | 23.94 h | -0.0134°/day | 27 / 29 km | 27 / 50 km |
+| INSAT-3DR | 35,787 km | 23.93 h | -0.0134°/day | 27 / 30 km | 27 / 49 km |
 | IRNSS-1I (NavIC) | 35,787 km | 23.94 h | -0.0117°/day | 30 / 33 km | 60 / 38 km |
 
 In low orbit the corrections improve the 1-week error by a factor of
-113–214. At geosynchronous height plain Kepler is already within
+113–215. At geosynchronous height plain Kepler is already within
 27–60 km after a week, and the corrections don't reliably help.
 
 **Why the difference: the forces involved.** Sizes of the accelerations acting on a satellite at the
@@ -112,7 +112,7 @@ textbook constants. "ppm" is parts per million of Earth's ordinary (central) gra
 - **Drag is a low-orbit effect only.** The air density at 400 km is tiny but not zero. At 36,000 km there
   is effectively none, which is why the ṅ term is applied only below SGP4's 225-minute dividing line.
 - **What matters to an observer is angle, not kilometres.** A geostationary satellite is ~35,786 km away,
-  so a 50 km error is only 0.08° on the sky, far less than a satellite dish's
+  so a 49 km error is only 0.08° on the sky, far less than a satellite dish's
   beam width. In low orbit the satellite moves fast, so the same kind of error shows up as a *timing* error
   instead: 7.7 km/s means 15 km is about 2 seconds.
 
@@ -138,6 +138,40 @@ set (epoch 9 October). Its start and end times are when the ISS crosses 10° ele
   errors that look large in kilometres.
 - **Pure Kepler misses most passes** (they happen at a different time, or not at all, in its model).
 
+## Against NASA's actual ISS trajectory
+
+SGP4 is only a yardstick. A better one, for the ISS, is NASA's own trajectory: the ephemeris NASA
+publishes for the station ([ISS OEM](https://nasa-public-data.s3.amazonaws.com/iss-coords/current/ISS_OEM/ISS.OEM_J2K_EPH.txt),
+created 2026-10-07 from NASA's tracking with a detailed drag model). It is in the J2000 (EME2000) frame, so
+every model's output is first converted from TEME to J2000: precession since 2000 (~0.37°, which would otherwise
+be a ~44 km error) and nutation. That conversion reproduces Vallado et al. (2006) to under 1 m.
+
+Same ISS element set as above (epoch 9 October), worst error within each window (km), and the along-track
+error at day 7 (+ = the model runs ahead of the real ISS):
+
+| Model | ≤ 6 hours | ≤ 1 day | ≤ 3 days | ≤ 7 days | Along-track, day 7 |
+|---|---|---|---|---|---|
+| SGP4 (satellite.js) | 6.7 | 9.4 | 21 | 60 | +59 |
+| Kepler | 93 | 454 | 1,369 | 3,170 | −895 |
+| Kepler + J2 | 18 | 19 | 19 | 89 | −89 |
+| Kepler + J2 + drag | 18 | 21 | 33 | 69 | +46 |
+
+- **The frames check out on real data.** At the start, SGP4 and NASA agree to 65 m radially and
+  133 m cross-track. A frame mistake would show up exactly there. SGP4 starts
+  5.1 km ahead along-track, a normal size of error for a fitted element set.
+- **SGP4 itself is 60 km off after a week.** It runs steadily ahead: the element set implies more drag than
+  NASA's trajectory does.
+- **Against the real trajectory, the drag term is no longer a clear win.** Against SGP4 it cut the ISS's 1-week error
+  tenfold, but that was largely agreeing with SGP4's own drag. Against NASA, after 7 days J2 alone is 89 km
+  *behind* the real ISS and J2 + drag is 46 km *ahead*. The truth lies between: the ṅ in the element set
+  (like SGP4's drag) overestimates this week's drag. Real drag depends on solar activity, which a constant ṅ can't capture.
+- **Both J2 models land between 0.9× and 2.7× SGP4's own error** across these windows, and at 3 days
+  J2 alone (19 km) is slightly better than SGP4 (21 km). For a model built from a handful
+  of equations, that is the headline result: over days, the simple physics does nearly as well as the standard model
+  *against reality*. SGP4 is clearly better in the first hours, thanks to the short-period terms these models leave out.
+- **Caveat:** NASA's file is itself a prediction made on 2026-10-07, not raw tracking, so by the end of this window it
+  may be a few km from where the ISS really was.
+
 ## Visible passes vs Heavens-Above
 
 A pass is **visible** when the satellite is sunlit while the observer's sky is dark (Sun more than 6°
@@ -151,12 +185,31 @@ satellite is in Earth's shadow. Heavens-Above labels each pass the same way (5 o
 - The shadow model (Earth as a sphere, Sun's centre hidden) agrees with satellite.js's shadow function
   at every sampled position outside the few seconds of penumbra.
 
+Heavens-Above's "visible passes" list gives the exact visible window and a predicted brightness. With J2 + drag
+and an assumed ISS standard magnitude of -1.8 (brightness at 1000 km, half lit; not fitted to Heavens-Above):
+
+| Visible from (UTC) | Starts because it… | Start difference | End difference | Magnitude (here) | Magnitude (Heavens-Above) | Difference |
+|---|---|---|---|---|---|---|
+| 10-10 23:35:32 | rises sunlit | -1 s | 1 s | -2.2 | -2.3 | +0.1 |
+| 10-11 22:51:07 | leaves shadow | -1 s | 0 s | -0.4 | -1.1 | +0.7 |
+| 10-12 23:40:24 | leaves shadow | -1 s | 0 s | -3.6 | -3.1 | -0.5 |
+| 10-13 22:56:21 | leaves shadow | -2 s | 0 s | -0.6 | -1.0 | +0.4 |
+
+- **Shadow entry and exit times match to within 2 s**, including the passes where the ISS comes out of Earth's
+  shadow part-way across the sky. That checks the Sun position and the shadow geometry together.
+- **Brightness is rougher: within 0.7 magnitudes.** The model treats the ISS as a matt sphere. The differences
+  aren't a constant offset (they range from −0.5 to +0.7), so this isn't just a wrong standard magnitude:
+  the phase law differs, and the real ISS, with its large flat solar arrays, isn't a sphere. Both agree on which
+  pass is brightest.
+- **Refraction** (on in the app, off in all the comparisons above) makes objects near the horizon look ~0.57° higher.
+  ISS passes from the true horizon therefore start ~5–15 s earlier; at 10° the shift is about 1 s.
+
 ## Limitations of this comparison
 
 - Errors are measured from each element set's epoch. In the app, positions are predicted
   from data that is already hours or days old, so real-world error is larger.
 - One snapshot of elements per satellite. A fuller study would repeat this over many element
   sets and dates.
-- No comparison against true positions (e.g. GPS-derived ISS ephemerides) yet.
+- The NASA comparison covers the ISS only, over one week; NASA's file is a prediction, not measured positions.
 - The force table gives magnitudes only (the tidal terms are their maximum values); the effect on an
   orbit also depends on direction and on how the force averages over an orbit.

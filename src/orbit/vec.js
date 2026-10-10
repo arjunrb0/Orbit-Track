@@ -21,6 +21,12 @@ export const rotateX = ([x, y, z], angle) => {
   return [x, c * y - s * z, s * y + c * z];
 };
 
+/** Rotate v about the y axis. */
+export const rotateY = ([x, y, z], angle) => {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return [c * x + s * z, y, -s * x + c * z];
+};
+
 /** Rotate v about the z axis. */
 export const rotateZ = ([x, y, z], angle) => {
   const c = Math.cos(angle), s = Math.sin(angle);

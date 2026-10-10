@@ -230,3 +230,38 @@ details in [RESULTS.md](RESULTS.md))
 **Limitations**
 - Drag uses a constant ṅ; real drag changes with solar activity, and the ISS reboosts.
 - No brightness (magnitude) estimate; no penumbra; no atmospheric refraction.
+
+## Further work: real ISS positions, refraction, brightness (2026-10-10)
+
+**Built**
+- `src/orbit/precession.js`: TEME → J2000 (IAU-76 precession, the four largest IAU-80 nutation terms).
+- Comparison against NASA's own ISS trajectory (the ISS OEM ephemeris, EME2000). The daily Action now
+  also fetches it (optional: a failure keeps the previous file). For the ISS, the accuracy panel can switch
+  between "vs SGP4" and "vs NASA trajectory", with SGP4's own error shown as a dashed line.
+- `src/passes/sky.js`: atmospheric refraction (Sæmundsson) and a brightness model (matt sphere, phase law,
+  inverse square). Refraction is on in the app; brightness is shown for the ISS only (assumed standard
+  magnitude −1.8).
+
+**Results**
+- TEME → J2000 reproduces Vallado et al. (2006) to under 1 m.
+- vs NASA, ISS, element set of 9 Oct: SGP4 9 km after 1 day and 60 km after 7. Kepler + J2: 19 km, 89 km.
+  Kepler + J2 + drag: 21 km, 69 km. The J2 models land between 0.9× and 2.7× SGP4's own error.
+- Heavens-Above visible passes: the same 4 passes; shadow entry/exit within 2 s; magnitudes within 0.7.
+
+**Surprises and corrections**
+- The drag term's tenfold improvement was against SGP4. Against NASA's trajectory, J2 alone ends 89 km behind
+  the real ISS and J2 + drag 46 km ahead: the element set's ṅ (like SGP4's drag) overestimated that week's
+  drag. The README and results now say this explicitly. The lesson is that agreeing with your reference
+  model isn't the same as agreeing with reality.
+- First draft of the NASA write-up said the J2 models were "within about 2×" of SGP4 and that the two drag
+  errors were "similar". Measured: 0.9–2.7×, and 89 vs 46 km. Replaced with computed numbers.
+- NASA's file has timestamps on odd minutes before 10 Oct 12:00; the first fixture extraction (which
+  filtered on whole 20-minute marks) silently dropped them. Fixed by taking every 5th state.
+- The accuracy chart's day labels collided on phones (a pre-existing bug). Labels are now thinned to fit.
+- Heavens-Above's "visible only" list has 4 passes, not 5: it agrees with the app's above-10° labelling,
+  resolving the earlier definition question.
+
+**Limitations**
+- NASA's ephemeris is itself a prediction (made 7 Oct), not raw tracking.
+- Brightness: within ±0.7 magnitudes; the differences aren't a constant offset, so the sphere phase law is
+  the limiting assumption (the ISS's flat solar arrays don't reflect like a sphere).

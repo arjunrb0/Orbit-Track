@@ -22,7 +22,8 @@
 
 import { DEG } from '../orbit/constants.js';
 import { propagateJ2 } from '../orbit/j2.js';
-import { temeToEcef, lookAngles } from '../orbit/frames.js';
+import { temeToEcef, ecefToTeme, geodeticToEcef, lookAngles } from '../orbit/frames.js';
+import { apparentElevation, phaseAngle, visualMagnitude } from './sky.js';
 import { sunPosition, isSunlit } from '../orbit/sun.js';
 
 // The sky counts as dark once the Sun is 6 deg below the horizon (the end of
@@ -88,9 +89,14 @@ function goldenMax(f, a, b) {
  *   { t, azDeg, elDeg }. `partial` is set if the pass was already in progress
  *   at `start` (rise is then the window start) or still going at `end`.
  */
-export function findPasses(el, observer, { start, end, stepMs = 60e3, minElevationDeg = 0, propagate = propagateJ2 }) {
+export function findPasses(el, observer, { start, end, stepMs = 60e3, minElevationDeg = 0, propagate = propagateJ2, refraction = false }) {
   const minEl = minElevationDeg * DEG;
-  const look = (t) => lookAt(el, observer, t, propagate);
+  // With refraction on, elevations are what the eye sees (slightly higher
+  // near the horizon), so passes start a few seconds earlier.
+  const look = (t) => {
+    const l = lookAt(el, observer, t, propagate);
+    return refraction ? { ...l, elevation: apparentElevation(l.elevation) } : l;
+  };
   const f = (t) => look(t).elevation - minEl;
   const point = (t) => {
     const l = look(t);
@@ -141,17 +147,26 @@ export function findPasses(el, observer, { start, end, stepMs = 60e3, minElevati
 }
 
 /**
- * Points along a pass for drawing a sky plot: [{ t, azDeg, elDeg, sunlit, sunElDeg }].
- * `sunlit`: the satellite is in sunlight. `sunElDeg`: the Sun's elevation for the observer.
+ * Points along a pass for drawing a sky plot:
+ *   [{ t, azDeg, elDeg, sunlit, sunElDeg, magnitude }]
+ * `sunlit`: the satellite is in sunlight. `sunElDeg`: the Sun's (geometric)
+ * elevation for the observer. `magnitude`: estimated brightness, if the
+ * satellite's standard magnitude is known and it is sunlit.
  */
-export function passTrack(el, observer, pass, stepMs = 10e3, propagate = propagateJ2) {
+export function passTrack(el, observer, pass, stepMs = 10e3, propagate = propagateJ2, { refraction = false, standardMagnitude = null } = {}) {
   const out = [];
+  const obsEcef = geodeticToEcef(observer.lat, observer.lon, observer.height ?? 0);
   const add = (t) => {
     const { r } = propagate(el, t);
     const l = lookAngles(temeToEcef(r, t), observer);
     const sun = sunPosition(t);
     const sunEl = lookAngles(temeToEcef(sun, t), observer).elevation;
-    out.push({ t, azDeg: l.azimuth / DEG, elDeg: l.elevation / DEG, sunlit: isSunlit(r, sun), sunElDeg: sunEl / DEG });
+    const sunlit = isSunlit(r, sun);
+    const magnitude = sunlit && standardMagnitude !== null
+      ? visualMagnitude(standardMagnitude, l.range, phaseAngle(r, sun, ecefToTeme(obsEcef, t)))
+      : null;
+    const elevation = refraction ? apparentElevation(l.elevation) : l.elevation;
+    out.push({ t, azDeg: l.azimuth / DEG, elDeg: elevation / DEG, sunlit, sunElDeg: sunEl / DEG, magnitude });
   };
   for (let t = pass.rise.t; t < pass.set.t; t += stepMs) add(t);
   add(pass.set.t);
@@ -165,10 +180,15 @@ export function passTrack(el, observer, pass, stepMs = 10e3, propagate = propaga
  *   'daylight' - the sky is too bright (Sun above -6 deg)
  * For visible passes, also gives when the visible part starts and ends.
  */
-export function passVisibility(el, observer, pass, propagate = propagateJ2, stepMs = 2e3) {
-  const track = passTrack(el, observer, pass, stepMs, propagate);
+export function passVisibility(el, observer, pass, propagate = propagateJ2, stepMs = 2e3, options = {}) {
+  const track = passTrack(el, observer, pass, stepMs, propagate, options);
   const seen = track.filter((p) => p.sunlit && p.sunElDeg < DARK_SKY_SUN_ELEVATION_DEG);
-  if (seen.length) return { type: 'visible', from: seen[0].t, to: seen.at(-1).t, track };
+  if (seen.length) {
+    // Brightest moment of the visible part (smallest magnitude), if known.
+    const mags = seen.map((p) => p.magnitude).filter((m) => m !== null);
+    const magnitude = mags.length ? Math.min(...mags) : null;
+    return { type: 'visible', from: seen[0].t, to: seen.at(-1).t, magnitude, track };
+  }
   const atMax = track.reduce((a, b) => (b.elDeg > a.elDeg ? b : a));
   return { type: atMax.sunElDeg < DARK_SKY_SUN_ELEVATION_DEG ? 'unlit' : 'daylight', track };
 }

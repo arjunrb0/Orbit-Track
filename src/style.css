@@ -151,7 +151,10 @@ canvas.view[hidden] { display: none; }
 .acc-head { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: flex-start; }
 .acc-head h2 { font-size: 0.95rem; }
 .acc-head p { margin: 0.3rem 0 0; font-size: 0.78rem; max-width: 640px; line-height: 1.45; }
-.acc-legend { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--muted); }
+.acc-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+.acc-side [hidden] { display: none; }
+.acc-legend { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; justify-content: flex-end; }
+.swatch.swatch-ref { background: transparent !important; height: 0; border-top: 2px dashed var(--muted); border-radius: 0; width: 14px; }
 .acc-legend > span { display: inline-flex; align-items: center; gap: 0.4rem; }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex: none; }
 .acc-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin: 0.9rem 0 0.4rem; }
@@ -237,6 +240,8 @@ tr + tr td { border-top: 1px solid rgba(33, 43, 69, 0.6); }
   .vis { padding: 0.08rem 0.35rem; }
   .pass-list .secs { display: none; }
   .acc-tiles { grid-template-columns: 1fr; }
+  .acc-side { align-items: flex-start; }
+  .acc-legend { justify-content: flex-start; }
   /* Let the viewer take the shape of what it shows: a wide map or a square globe. */
   .viewer { height: auto; min-height: 0; aspect-ratio: 1; }
   .viewer[data-view='map'] { aspect-ratio: 4 / 3; }

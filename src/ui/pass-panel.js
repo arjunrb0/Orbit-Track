@@ -24,6 +24,9 @@ const fmtDay = (t) => new Date(t).toLocaleDateString(undefined, { weekday: 'shor
 const fmtDuration = (s) => `${Math.floor(s / 60)}m ${String(Math.round(s % 60)).padStart(2, '0')}s`;
 
 const SEARCH_DAYS = 7;
+const fmtMag = (m) => (m < 0 ? `−${Math.abs(m).toFixed(1)}` : `+${m.toFixed(1)}`);
+// For scale: Sirius, the brightest star, is -1.46; Venus is about -4.
+const brightnessHint = (m) => (m <= -1.46 ? ' (brighter than any star)' : m <= 1 ? ' (as bright as the brightest stars)' : '');
 const VIS_LABEL = { visible: 'Visible', daylight: 'Daylight', unlit: 'In shadow' };
 const VIS_HELP = {
   visible: 'Sunlit against a dark sky: you can see it with the naked eye',
@@ -50,6 +53,7 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
   let skySize = 0;
 
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const skyOptions = () => ({ refraction: true, standardMagnitude: sat.info?.standardMagnitude ?? null });
 
   function compute() {
     const now = getTime();
@@ -59,9 +63,10 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
       end: now + SEARCH_DAYS * 86400e3,
       minElevationDeg: getMinElevation(),
       propagate: getPropagate(),
+      refraction: true,
     });
     // Label every pass: visible / daylight / in Earth's shadow.
-    for (const p of result.passes) p.vis = passVisibility(sat.el, getObserver(), p, getPropagate(), 5e3);
+    for (const p of result.passes) p.vis = passVisibility(sat.el, getObserver(), p, getPropagate(), 5e3, skyOptions());
     applyFilter();
   }
 
@@ -104,7 +109,7 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
       const vis = document.createElement('td');
       const badge = document.createElement('span');
       badge.className = `vis vis-${p.vis.type}`;
-      badge.textContent = VIS_LABEL[p.vis.type];
+      badge.textContent = VIS_LABEL[p.vis.type] + (p.vis.magnitude != null ? ` ${fmtMag(p.vis.magnitude)}` : '');
       badge.title = VIS_HELP[p.vis.type];
       vis.append(badge);
       tr.append(vis);
@@ -209,7 +214,8 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
     if (p.vis.type === 'visible') {
       const enters = p.vis.to < p.set.t - 10e3 ? ', then it enters Earth\'s shadow' : '';
       const leaves = p.vis.from > p.rise.t + 10e3 ? ' (after leaving Earth\'s shadow)' : '';
-      seeIt = ` Visible ${fmtTime(p.vis.from).slice(0, 5)}–${fmtTime(p.vis.to).slice(0, 5)}${leaves}${enters}.`;
+      const bright = p.vis.magnitude != null ? ` At its brightest, magnitude ${fmtMag(p.vis.magnitude)}${brightnessHint(p.vis.magnitude)}.` : '';
+      seeIt = ` Visible ${fmtTime(p.vis.from).slice(0, 5)}–${fmtTime(p.vis.to).slice(0, 5)}${leaves}${enters}.${bright}`;
     } else {
       seeIt = ` ${VIS_HELP[p.vis.type]}.`;
     }
@@ -273,11 +279,12 @@ export function createPassPanel(root, { getTime, getObserver, getPropagate, getM
 
 /** Next pass (or "up now") for a satellite card. */
 export function nextPassSummary(sat, observer, now, propagate, minElevationDeg) {
-  const r = findPasses(sat.el, observer, { start: now, end: now + 2 * 86400e3, minElevationDeg, propagate, stepMs: 60e3 });
+  const r = findPasses(sat.el, observer, { start: now, end: now + 2 * 86400e3, minElevationDeg, propagate, stepMs: 60e3, refraction: true });
   if (r.status === 'always-up') return { text: 'Always above the horizon', up: true };
   if (r.status === 'never-up') return { text: 'No passes in the next 2 days', up: false };
   const p = r.passes[0];
-  const visible = passVisibility(sat.el, observer, p, propagate, 10e3).type === 'visible' ? ' · visible' : '';
+  const vis = passVisibility(sat.el, observer, p, propagate, 10e3, { refraction: true, standardMagnitude: sat.info?.standardMagnitude ?? null });
+  const visible = vis.type === 'visible' ? ` · visible${vis.magnitude != null ? ` (${fmtMag(vis.magnitude)})` : ''}` : '';
   if (p.partial) return { text: `Passing now, until ${fmtTime(p.set.t).slice(0, 5)}${visible}`, up: true, until: p.set.t };
   return { text: `Next pass ${fmtDay(p.rise.t)} ${fmtTime(p.rise.t).slice(0, 5)}, max ${p.max.elDeg.toFixed(0)}°${visible}`, up: false, until: p.rise.t };
 }

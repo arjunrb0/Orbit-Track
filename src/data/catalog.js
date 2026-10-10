@@ -6,7 +6,10 @@
 // will be useful for the low-vs-high orbit comparison later.
 
 export const CATALOG = [
-  { noradId: 25544, name: 'ISS (ZARYA)', operator: 'International', orbit: 'LEO, 51.6°' },
+  // standardMagnitude: brightness at 1000 km range, half lit. -1.8 is an assumed
+  // value for the ISS (common in amateur prediction tools), not fitted to any
+  // reference. Unknown for the ISRO satellites, so no brightness is shown for them.
+  { noradId: 25544, name: 'ISS (ZARYA)', operator: 'International', orbit: 'LEO, 51.6°', standardMagnitude: -1.8 },
   { noradId: 44804, name: 'CARTOSAT-3', operator: 'ISRO', orbit: 'LEO, sun-synchronous' },
   { noradId: 51656, name: 'EOS-04', operator: 'ISRO', orbit: 'LEO, sun-synchronous' },
   { noradId: 54361, name: 'EOS-06 (OCEANSAT-3)', operator: 'ISRO', orbit: 'LEO, sun-synchronous' },
